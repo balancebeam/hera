@@ -1,6 +1,7 @@
 package io.anyway.hera.concurrent;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.scheduler.MetricsProcessor;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
@@ -54,7 +55,7 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
             ThreadPoolTaskExecutor executor= each.getValue();
             Map<String,Object> payload= new LinkedHashMap<String, Object>();
             //设置工作线程标识
-            payload.put("category","workThread");
+            //payload.put("category","workThread");
             //工作线程池的名称
             payload.put("name",each.getKey());
             //最大线程池数
@@ -75,12 +76,12 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
             //采集的当前时间
             payload.put("timestamp",System.currentTimeMillis());
             //发送监控数据
-            MetricsCollector.collect(payload);
+            MetricsUnifiedCollector.collect(MetricsType.WORKTHREAD,payload);
         }
         //系统线程池收集
         ThreadMXBean instance = ManagementFactory.getThreadMXBean();
         Map<String,Object> payload= new LinkedHashMap<String, Object>();
-        payload.put("category","sysThread");
+        //payload.put("category","sysThread");
         //线程总数
         payload.put("threadCount",instance.getThreadCount());
         //峰值活动线程数
@@ -94,6 +95,6 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
         //采集的当前时间
         payload.put("timestamp",System.currentTimeMillis());
         //发送监控数据
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.SYSTHREAD,payload);
     }
 }

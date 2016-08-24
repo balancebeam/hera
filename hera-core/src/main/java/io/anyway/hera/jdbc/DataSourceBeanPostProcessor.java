@@ -1,6 +1,7 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.scheduler.MetricsProcessor;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
@@ -135,9 +136,9 @@ public class DataSourceBeanPostProcessor implements BeanPostProcessorWrapper,Ser
                 hash.put("stackTrace",info.getOpeningStackTrace().toString());
                 traceList.add(hash);
             }
-            payload.put("holdedTraceList",traceList);
+            payload.put("holdedTraceList",traceList.toString());
             payload.put("timestamp",System.currentTimeMillis());
-            MetricsCollector.collect(payload);
+            MetricsUnifiedCollector.collect(MetricsType.JDBC,payload);
         }
     }
 }

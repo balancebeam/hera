@@ -1,6 +1,7 @@
 package io.anyway.hera.web;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -91,10 +92,10 @@ public class MetricsListener implements HttpSessionListener, HttpSessionActivati
 
     private void doMonitor(){
         Map<String,Object> payload= new LinkedHashMap<String, Object>();
-        payload.put("category","session");
+        //payload.put("category","session");
         payload.put("count",SESSION_COUNT.get());
         payload.put("timestamp",System.currentTimeMillis());
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.SESSION,payload);
     }
 
 }

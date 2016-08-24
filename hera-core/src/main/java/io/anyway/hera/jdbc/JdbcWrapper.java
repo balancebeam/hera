@@ -1,6 +1,7 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -288,7 +289,7 @@ class JdbcWrapper {
 
             long endTime= System.currentTimeMillis();
             //设置类别为http
-            payload.put("category","sql");
+            //payload.put("category","sql");
             //设置调用方法名称
             payload.put("sql",requestName);
             //记录请求开始时间
@@ -296,7 +297,7 @@ class JdbcWrapper {
             //记录执行的时间
             payload.put("duration",endTime-beginTime);
             //发送监控记录
-            MetricsCollector.collect(payload);
+            MetricsUnifiedCollector.collect(MetricsType.SQL,payload);
         }
     }
 

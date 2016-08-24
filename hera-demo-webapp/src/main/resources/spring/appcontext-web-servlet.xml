@@ -87,11 +87,8 @@
         <property name="period" value="10000"></property>
     </bean>
 
-    <bean class="io.anyway.hera.common.MetricsCollector">
+    <bean class="io.anyway.hera.common.MetricsUnifiedCollector">
         <property name="group" value="demo"></property>
-        <property name="handler">
-            <bean class="io.anyway.hera.demo.service.MetricsDemoHandler"></bean>
-        </property>
     </bean>
     
     <context:component-scan base-package="io.anyway.hera.demo"/>

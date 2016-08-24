@@ -1,6 +1,7 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.scheduler.MetricsProcessor;
 
 import java.lang.management.ManagementFactory;
@@ -17,7 +18,7 @@ public class CpuMetricsProcessor implements MetricsProcessor {
     public void doMonitor() {
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
         //设置内存类别
-        payload.put("category","cpu");
+        //payload.put("category","cpu");
         //获取操作系统
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
         //获取处理器核数
@@ -31,6 +32,6 @@ public class CpuMetricsProcessor implements MetricsProcessor {
         //采集时间
         payload.put("timestamp",System.currentTimeMillis());
         //发送采集信息
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.CPU,payload);
     }
 }

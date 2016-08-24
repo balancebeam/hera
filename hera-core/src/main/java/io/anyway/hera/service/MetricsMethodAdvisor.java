@@ -1,7 +1,8 @@
 package io.anyway.hera.service;
 
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.common.TransactionIdGenerator;
 import io.anyway.hera.context.MetricsContext;
 import io.anyway.hera.context.MetricsContextHolder;
@@ -25,7 +26,7 @@ public class MetricsMethodAdvisor implements MethodInterceptor,Ordered {
 
         long beginTime= System.currentTimeMillis();
         //设置类别为http
-        payload.put("category","service");
+        //payload.put("category","service");
         //设置行为规则为进入
         payload.put("action","in");
         //设置调用方法名称
@@ -33,7 +34,7 @@ public class MetricsMethodAdvisor implements MethodInterceptor,Ordered {
         //记录请求开始时间
         payload.put("timestamp",beginTime);
         //发送监控记录
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.SERVICE,payload);
         //获取监控上下文
         MetricsContext ctx= MetricsContextHolder.getMetricsContext();
         //把当前的路径入栈
@@ -65,7 +66,7 @@ public class MetricsMethodAdvisor implements MethodInterceptor,Ordered {
             //更改行为规则为出去
             payload.put("action","out");
             //发送监控记录
-            MetricsCollector.collect(payload);
+            MetricsUnifiedCollector.collect(MetricsType.SERVICE,payload);
         }
 
     }

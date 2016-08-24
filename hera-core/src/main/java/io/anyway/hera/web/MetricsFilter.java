@@ -1,7 +1,8 @@
 package io.anyway.hera.web;
 
 import io.anyway.hera.common.Constants;
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.common.TransactionIdGenerator;
 import io.anyway.hera.context.MetricsContext;
 import io.anyway.hera.context.MetricsContextHolder;
@@ -59,7 +60,7 @@ public class MetricsFilter implements Filter {
         //设置该请求的唯一ID
         payload.put("atomId",atomId);
         //设置类别为http
-        payload.put("category","http");
+        //payload.put("category","http");
         //设置行为规则为进入
         payload.put("action","in");
         //设置请求的http URL
@@ -67,7 +68,7 @@ public class MetricsFilter implements Filter {
         //记录请求开始时间
         payload.put("timestamp",beginTime);
         //发送监控记录
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.HTTP,payload);
 
         //把当前的路径入栈
         transactionTrace.add(atomId);
@@ -100,7 +101,7 @@ public class MetricsFilter implements Filter {
             //更改行为规则为出去
             payload.put("action","out");
             //发送监控记录
-            MetricsCollector.collect(payload);
+            MetricsUnifiedCollector.collect(MetricsType.HTTP,payload);
             //清空上下文变量
             MetricsContextHolder.clear();
         }

@@ -1,6 +1,7 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.MetricsUnifiedCollector;
 import io.anyway.hera.scheduler.MetricsProcessor;
 
 import java.lang.management.ManagementFactory;
@@ -20,7 +21,7 @@ public class MemoryMetricsProcessor implements MetricsProcessor {
 
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
         //设置内存类别
-        payload.put("category","memory");
+        //payload.put("category","memory");
         //虚拟机最大内存
         payload.put("maxMemory",Runtime.getRuntime().maxMemory());
         //已经使用的虚机内存
@@ -73,7 +74,7 @@ public class MemoryMetricsProcessor implements MetricsProcessor {
         //采集时间
         payload.put("timestamp",System.currentTimeMillis());
         //发送采集信息
-        MetricsCollector.collect(payload);
+        MetricsUnifiedCollector.collect(MetricsType.MEMORY,payload);
     }
 
     private static MemoryPoolMXBean getPermGenMemoryPool() {
