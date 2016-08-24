@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<bean class="io.anyway.hera.spring.MetricsBeanPostProcessor">
+		<property name="beanPostProcessorWrappers">
+			<list>
+				<ref bean="dataSourceMetricsProcessor"></ref>
+				<ref bean="threadPoolMetricsProcessor"></ref>
+			</list>
+		</property>
+	</bean>
+
+	<bean class="org.springframework.aop.support.DefaultPointcutAdvisor">
+		<property name="advice">
+			<bean class="io.anyway.hera.service.MetricsMethodAdvisor"/>
+		</property>
+		<property name="pointcut">
+			<bean class="io.anyway.hera.service.MetricsTypePointcut">
+				<property name="pointcutTypes">
+					<array>
+						<value>org.springframework.stereotype.Service</value>
+					</array>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="dataSourceMetricsProcessor" class="io.anyway.hera.jdbc.DataSourceBeanPostProcessor">
+		<property name="traceInterestPackages">
+			<list>
+				<!--<value>io.anyway.hera.demo</value>-->
+			</list>
+		</property>
+	</bean>
+	<bean id="threadPoolMetricsProcessor" class="io.anyway.hera.concurrent.ThreadPoolBeanPostProcessor"/>
+	<bean id="cpuMetricsProcessor" class="io.anyway.hera.jvm.CpuMetricsProcessor"/>
+	<bean id="memoryMetricsProcessor" class="io.anyway.hera.jvm.MemoryMetricsProcessor"/>
+
+	<bean class="io.anyway.hera.scheduler.MetricsTimerProcessor">
+		<property name="delay" value="5000"></property>
+		<property name="period" value="10000"></property>
+	</bean>
+
+	<bean class="io.anyway.hera.common.MetricsCollector">
+		<property name="group" value="demo"></property>
+		<!--<property name="handler">
+			<bean class="io.anyway.hera.demo.service.MetricsDemoHandler"></bean>
+		</property>-->
+	</bean>
+
+	<aop:aspectj-autoproxy/>
+
+</beans>
