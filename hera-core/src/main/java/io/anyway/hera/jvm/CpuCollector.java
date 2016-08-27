@@ -1,8 +1,8 @@
 package io.anyway.hera.jvm;
 
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
-import io.anyway.hera.scheduler.MetricsProcessor;
+import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.common.MetricsCollector;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -12,10 +12,10 @@ import java.util.Map;
 /**
  * Created by yangzz on 16/8/24.
  */
-public class CpuMetricsProcessor implements MetricsProcessor {
+public class CpuCollector implements MetricsCollector {
 
     @Override
-    public void doMonitor() {
+    public void doCollect() {
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
         //设置内存类别
         //payload.put("category","cpu");
@@ -30,8 +30,8 @@ public class CpuMetricsProcessor implements MetricsProcessor {
         //获取处理器核数
         payload.put("systemLoadAverage",operatingSystem.getSystemLoadAverage());
         //采集时间
-        payload.put("timestamp",System.currentTimeMillis());
+        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
         //发送采集信息
-        MetricsUnifiedCollector.collect(MetricsType.CPU,payload);
+        MetricsManager.collect(MetricsType.CPU,payload);
     }
 }

@@ -1,9 +1,9 @@
 package io.anyway.hera.demo.service.impl;
 
-import io.anyway.hera.annotation.Metrics;
 import io.anyway.hera.demo.dao.RepositoryDao;
 import io.anyway.hera.demo.domain.RepositoryDO;
 import io.anyway.hera.demo.service.RepositoryService;
+import io.anyway.hera.service.ServiceMetrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +37,7 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
+    @ServiceMetrics
     public void f2() {
         logger.info("----------------invoke-------f2");
         try {

@@ -2,10 +2,10 @@ package io.anyway.hera.web;
 
 import io.anyway.hera.common.Constants;
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
+import io.anyway.hera.common.MetricsManager;
 import io.anyway.hera.common.TransactionIdGenerator;
-import io.anyway.hera.context.MetricsContext;
-import io.anyway.hera.context.MetricsContextHolder;
+import io.anyway.hera.context.MetricsTraceContext;
+import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.slf4j.MDC;
 import org.springframework.util.StringUtils;
 
@@ -46,12 +46,12 @@ public class MetricsFilter implements Filter {
         //把跟踪链的信息绑定到日志里,方便做日志跟踪
         MDC.put("transactionId",transactionId);
         //构造监控上下文
-        MetricsContext ctx= new MetricsContext();
+        MetricsTraceContext ctx= new MetricsTraceContext();
         ctx.setTransactionId(transactionId);
         ctx.setTransactionTrace(transactionTrace);
         ctx.setRemote(request.getRemoteHost());
         //绑定监控上下文到Threadlocal
-        MetricsContextHolder.setMetricsContext(ctx);
+        MetricsTraceContextHolder.setMetricsTraceContext(ctx);
 
         String atomId= TransactionIdGenerator.next();
         long beginTime= System.currentTimeMillis();
@@ -66,9 +66,9 @@ public class MetricsFilter implements Filter {
         //设置请求的http URL
         payload.put("url",request.getContextPath()+request.getServletPath());
         //记录请求开始时间
-        payload.put("timestamp",beginTime);
+        payload.put("timestamp",MetricsManager.toLocalDate(beginTime));
         //发送监控记录
-        MetricsUnifiedCollector.collect(MetricsType.HTTP,payload);
+        MetricsManager.collect(MetricsType.HTTP,payload);
 
         //把当前的路径入栈
         transactionTrace.add(atomId);
@@ -95,15 +95,15 @@ public class MetricsFilter implements Filter {
             //记录结束时间
             long endTime= System.currentTimeMillis();
             //记录请求结束时间
-            payload.put("timestamp",endTime);
+            payload.put("timestamp",MetricsManager.toLocalDate(endTime));
             //记录执行的时间
             payload.put("duration",endTime-beginTime);
             //更改行为规则为出去
             payload.put("action","out");
             //发送监控记录
-            MetricsUnifiedCollector.collect(MetricsType.HTTP,payload);
+            MetricsManager.collect(MetricsType.HTTP,payload);
             //清空上下文变量
-            MetricsContextHolder.clear();
+            MetricsTraceContextHolder.clear();
         }
     }
 

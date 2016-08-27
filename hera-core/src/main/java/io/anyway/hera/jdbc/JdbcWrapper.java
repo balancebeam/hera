@@ -1,7 +1,7 @@
 package io.anyway.hera.jdbc;
 
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
+import io.anyway.hera.common.MetricsManager;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,7 +62,7 @@ class JdbcWrapper {
     private final AtomicInteger ACTIVE_CONNECTION_COUNT = new AtomicInteger();
     private final AtomicInteger HOLDED_CONNECTION_COUNT = new AtomicInteger();
     private final AtomicLong USED_CONNECTION_COUNT = new AtomicLong();
-    private final Map<Integer, ConnectionInformations> HOLD_CONNECTION_INFORMATIONS = new ConcurrentHashMap<Integer, ConnectionInformations>();
+    private final Map<Integer, LeakConnectionInformations> HOLD_CONNECTION_INFORMATIONS = new ConcurrentHashMap<Integer, LeakConnectionInformations>();
 
     private static final int MAX_USED_CONNECTION_INFORMATIONS = 500;
 
@@ -90,11 +90,11 @@ class JdbcWrapper {
     }
 
     static final class ConnectionInformationsComparator
-            implements Comparator<ConnectionInformations>, Serializable {
+            implements Comparator<LeakConnectionInformations>, Serializable {
         private static final long serialVersionUID = 1L;
 
         @Override
-        public int compare(ConnectionInformations connection1, ConnectionInformations connection2) {
+        public int compare(LeakConnectionInformations connection1, LeakConnectionInformations connection2) {
             return new Date(connection1.getOpeningTime()).compareTo(new Date(connection2.getOpeningTime()));
         }
     }
@@ -159,8 +159,8 @@ class JdbcWrapper {
             if (isConnectionInformationsEnabled()
                     && HOLD_CONNECTION_INFORMATIONS.size() < MAX_USED_CONNECTION_INFORMATIONS) {
                 HOLD_CONNECTION_INFORMATIONS.put(
-                        ConnectionInformations.getUniqueIdOfConnection(connection),
-                        new ConnectionInformations());
+                        LeakConnectionInformations.getUniqueIdOfConnection(connection),
+                        new LeakConnectionInformations());
             }
             HOLDED_CONNECTION_COUNT.incrementAndGet();
             USED_CONNECTION_COUNT.incrementAndGet();
@@ -190,7 +190,7 @@ class JdbcWrapper {
                 if ("close".equals(methodName) && !alreadyClosed) {
                     HOLDED_CONNECTION_COUNT.decrementAndGet();
                     HOLD_CONNECTION_INFORMATIONS
-                            .remove(ConnectionInformations.getUniqueIdOfConnection(connection));
+                            .remove(LeakConnectionInformations.getUniqueIdOfConnection(connection));
                     alreadyClosed = true;
                 }
             }
@@ -293,11 +293,11 @@ class JdbcWrapper {
             //设置调用方法名称
             payload.put("sql",requestName);
             //记录请求开始时间
-            payload.put("timestamp",endTime);
+            payload.put("timestamp",MetricsManager.toLocalDate(endTime));
             //记录执行的时间
             payload.put("duration",endTime-beginTime);
             //发送监控记录
-            MetricsUnifiedCollector.collect(MetricsType.SQL,payload);
+            MetricsManager.collect(MetricsType.SQL,payload);
         }
     }
 
@@ -420,8 +420,8 @@ class JdbcWrapper {
         return DATASOURCE_CONFIG_PROPERTIES;
     }
 
-    List<ConnectionInformations> getHoldedConnectionInformationsList() {
-        final List<ConnectionInformations> result = new ArrayList<ConnectionInformations>(
+    List<LeakConnectionInformations> getHoldedConnectionInformationsList() {
+        final List<LeakConnectionInformations> result = new ArrayList<LeakConnectionInformations>(
                 HOLD_CONNECTION_INFORMATIONS.values());
         Collections.sort(result, new ConnectionInformationsComparator());
         return Collections.unmodifiableList(result);

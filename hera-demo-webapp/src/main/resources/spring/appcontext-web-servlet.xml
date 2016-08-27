@@ -3,12 +3,10 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
-       xmlns:aop="http://www.springframework.org/schema/aop"
        xsi:schemaLocation="
 	     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
 	     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
-		 http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
-		 http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd"
+		 http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd"
        >
 
     <description>Spring公共配置</description>
@@ -32,6 +30,13 @@
         <property name="maxPoolSize" value="100"/>
     </bean>
 
+    <bean id ="taskExecutor2"  class ="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" >
+        <property name="keepAliveSeconds" value="10000"/>
+        <property name="queueCapacity" value="500"/>
+        <property name="corePoolSize" value="5"/>
+        <property name="maxPoolSize" value="100"/>
+    </bean>
+
     <mvc:annotation-driven>
         <mvc:message-converters register-defaults="true">
             <bean class="org.springframework.http.converter.StringHttpMessageConverter">
@@ -46,53 +51,8 @@
 
     <import resource="appcontext-service-db.xml" />
     <import resource="appcontext-service-dao.xml" />
-
-    <bean class="io.anyway.hera.spring.MetricsBeanPostProcessor">
-        <property name="beanPostProcessorWrappers">
-            <list>
-                <ref bean="dataSourceMetricsProcessor"></ref>
-                <ref bean="threadPoolMetricsProcessor"></ref>
-            </list>
-        </property>
-    </bean>
-
-    <bean class="org.springframework.aop.support.DefaultPointcutAdvisor">
-        <property name="advice">
-            <bean class="io.anyway.hera.service.MetricsMethodAdvisor"/>
-        </property>
-        <property name="pointcut">
-            <bean class="io.anyway.hera.service.MetricsTypePointcut">
-                <property name="pointcutTypes">
-                    <array>
-                        <value>org.springframework.stereotype.Service</value>
-                    </array>
-                </property>
-            </bean>
-        </property>
-    </bean>
-
-    <bean id="dataSourceMetricsProcessor" class="io.anyway.hera.jdbc.DataSourceBeanPostProcessor">
-        <property name="traceInterestPackages">
-            <list>
-                <value>io.anyway.hera.demo</value>
-            </list>
-        </property>
-    </bean>
-    <bean id="threadPoolMetricsProcessor" class="io.anyway.hera.concurrent.ThreadPoolBeanPostProcessor"/>
-    <bean id="cpuMetricsProcessor" class="io.anyway.hera.jvm.CpuMetricsProcessor"/>
-    <bean id="memoryMetricsProcessor" class="io.anyway.hera.jvm.MemoryMetricsProcessor"/>
-
-    <bean class="io.anyway.hera.scheduler.MetricsTimerProcessor">
-        <property name="delay" value="5000"></property>
-        <property name="period" value="10000"></property>
-    </bean>
-
-    <bean class="io.anyway.hera.common.MetricsUnifiedCollector">
-        <property name="group" value="demo"></property>
-    </bean>
+    <import resource="classpath:hera-metrics.xml"/>
     
     <context:component-scan base-package="io.anyway.hera.demo"/>
-
-    <aop:aspectj-autoproxy/>
 
 </beans>

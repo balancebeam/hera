@@ -1,27 +1,23 @@
 package io.anyway.hera.jvm;
 
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
-import io.anyway.hera.scheduler.MetricsProcessor;
+import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.common.MetricsCollector;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.MemoryUsage;
-import java.lang.management.OperatingSystemMXBean;
+import java.lang.management.*;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Created by yangzz on 16/8/24.
  */
-public class MemoryMetricsProcessor implements MetricsProcessor {
+public class MemoryCollector implements MetricsCollector {
 
     @Override
-    public void doMonitor() {
+    public void doCollect() {
 
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
-        //设置内存类别
-        //payload.put("category","memory");
         //虚拟机最大内存
         payload.put("maxMemory",Runtime.getRuntime().maxMemory());
         //已经使用的虚机内存
@@ -51,6 +47,7 @@ public class MemoryMetricsProcessor implements MetricsProcessor {
         memoryUsage= ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         //最大堆内存
         payload.put("maxHeapMemory",memoryUsage.getMax());
+
         //已使用的久带内存
         payload.put("usedHeapMemory",memoryUsage.getUsed());
         //获取操作系统对象
@@ -72,9 +69,26 @@ public class MemoryMetricsProcessor implements MetricsProcessor {
             payload.put("freeSwapSpace",-1);
         }
         //采集时间
-        payload.put("timestamp",System.currentTimeMillis());
+        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
         //发送采集信息
-        MetricsUnifiedCollector.collect(MetricsType.MEMORY,payload);
+        MetricsManager.collect(MetricsType.MEMORY,payload);
+
+        //采集内存垃圾回收信息
+        for(GarbageCollectorMXBean each: ManagementFactory.getGarbageCollectorMXBeans()){
+            payload= new LinkedHashMap<String,Object>();
+            //内存区名称
+            payload.put("name",each.getName());
+            //垃圾回收的次数
+            payload.put("collectionCount",each.getCollectionCount());
+            //垃圾回收持续的时间
+            payload.put("collectionTime",each.getCollectionTime());
+            //内存池名称
+            payload.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
+            //采集时间
+            payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
+            //发送采集信息
+            MetricsManager.collect(MetricsType.MEMORYGARBAGE,payload);
+        }
     }
 
     private static MemoryPoolMXBean getPermGenMemoryPool() {

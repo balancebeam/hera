@@ -1,8 +1,8 @@
 package io.anyway.hera.jdbc;
 
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
-import io.anyway.hera.scheduler.MetricsProcessor;
+import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.common.MetricsCollector;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -19,35 +19,42 @@ import java.util.*;
 /**
  * Created by yangzz on 16/8/17.
  */
-public class DataSourceBeanPostProcessor implements BeanPostProcessorWrapper,ServletContextAware,MetricsProcessor {
+public class DataSourceCollector implements BeanPostProcessorWrapper,ServletContextAware,MetricsCollector {
 
-    private Log logger= LogFactory.getLog(DataSourceBeanPostProcessor.class);
+    private Log logger= LogFactory.getLog(DataSourceCollector.class);
 
     private Map<String,JdbcWrapper> jdbcWrappers= new HashMap<String, JdbcWrapper>();
 
-    private Set<String> excludedDatasources;
+    private List<String> excludedDatasources;
 
     private ServletContext servletContext;
 
     /**
      * Connection泄露的跟踪有效包路径
-     * @param traceInterestPackages
+     * @param leakInterestTracePackages
      */
-    public void setTraceInterestPackages(List<String> traceInterestPackages){
-        if(!StringUtils.isEmpty(traceInterestPackages)){
-            ConnectionInformations.TRACE_INTEREST_PACKAGES = traceInterestPackages;
-            logger.info("TRACE_INTEREST_PACKAGES: "+traceInterestPackages);
+    public void setLeakInterestTracePackages(String leakInterestTracePackages){
+        if(!StringUtils.isEmpty(leakInterestTracePackages)){
+            List<String> leakPackages= Arrays.asList(leakInterestTracePackages.split(","));
+            LeakConnectionInformations.LEAK_INTEREST_TRACE_PACKAGES = leakPackages;
+            logger.info("LEAK_INTEREST_TRACE_PACKAGES: "+leakPackages);
         }
     }
 
     /**
      * 设置监控数据源的属性内容,默认 dbcp | druid 不用配置,c3p0 | jndi数据源需要配置
-     * @param dataSourceConfigMetadata
+     * @param configMetadata
      */
-    public void setDataSourceConfigMetadata(Map<String,String> dataSourceConfigMetadata){
-        if(dataSourceConfigMetadata!=null && !dataSourceConfigMetadata.isEmpty()){
-            JdbcWrapper.DATASOURCE_CONFIG_METADATA= dataSourceConfigMetadata;
-            logger.info("CONFIG_METADATA: "+dataSourceConfigMetadata);
+    public void setConfigMetadata(String configMetadata){
+
+        if(!StringUtils.isEmpty(configMetadata)){
+            Map<String,String> hash= new LinkedHashMap<String, String>();
+            for(String each: configMetadata.split(",")){
+                String[] kv= each.split(":");
+                hash.put(kv[0],kv[1]);
+            }
+            JdbcWrapper.DATASOURCE_CONFIG_METADATA= hash;
+            logger.info("CONFIG_METADATA: "+hash);
         }
     }
 
@@ -55,8 +62,10 @@ public class DataSourceBeanPostProcessor implements BeanPostProcessorWrapper,Ser
      * 不需要监控的数据源
      * @param excludedDatasources
      */
-    public void setExcludedDatasources(Set<String> excludedDatasources) {
-        this.excludedDatasources = excludedDatasources;
+    public void setExcludedDatasources(String excludedDatasources) {
+        if(!StringUtils.isEmpty(excludedDatasources)) {
+            this.excludedDatasources = Arrays.asList(excludedDatasources.split(","));
+        }
     }
 
     private boolean isExcludedDataSource(String beanName) {
@@ -118,27 +127,26 @@ public class DataSourceBeanPostProcessor implements BeanPostProcessorWrapper,Ser
     }
 
     @Override
-    public void doMonitor() {
+    public void doCollect() {
         for (Map.Entry<String,JdbcWrapper> each: jdbcWrappers.entrySet()){
             JdbcWrapper jdbcWrapper= each.getValue();
             Map<String,Object> payload= new LinkedHashMap<String, Object>();
-            payload.put("category","jdbc");
             payload.put("name",each.getKey());
             payload.put("maxActive",jdbcWrapper.getMaxActive());
             payload.put("maxWait",jdbcWrapper.getMaxWait());
             payload.put("activeCount",jdbcWrapper.getActiveConnectionCount());
             payload.put("usedCount",jdbcWrapper.getUsedConnectionCount());
-            payload.put("holdedCount",jdbcWrapper.getHoldedConnectionCount());
+            payload.put("leakCount",jdbcWrapper.getHoldedConnectionCount());
             List<Map<String,Object>> traceList= new LinkedList<Map<String, Object>>();
-            for (ConnectionInformations info: jdbcWrapper.getHoldedConnectionInformationsList()){
+            for (LeakConnectionInformations info: jdbcWrapper.getHoldedConnectionInformationsList()){
                 Map<String,Object> hash= new LinkedHashMap<String, Object>();
                 hash.put("openingTime",info.getOpeningTime());
                 hash.put("stackTrace",info.getOpeningStackTrace().toString());
                 traceList.add(hash);
             }
-            payload.put("holdedTraceList",traceList.toString());
-            payload.put("timestamp",System.currentTimeMillis());
-            MetricsUnifiedCollector.collect(MetricsType.JDBC,payload);
+            payload.put("leakTraceList",traceList.toString());
+            payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
+            MetricsManager.collect(MetricsType.JDBC,payload);
         }
     }
 }

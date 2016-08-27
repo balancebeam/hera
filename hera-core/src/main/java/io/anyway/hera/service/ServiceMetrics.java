@@ -1,4 +1,4 @@
-package io.anyway.hera.annotation;
+package io.anyway.hera.service;
 
 import java.lang.annotation.*;
 
@@ -9,6 +9,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface Metrics {
+public @interface ServiceMetrics {
     String value() default "";
 }

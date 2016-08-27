@@ -1,23 +1,30 @@
 package io.anyway.hera.service;
 
-import io.anyway.hera.annotation.Metrics;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by yangzz on 16/8/13.
  */
-public class MetricsTypePointcut implements Pointcut {
+public class ServiceTypePointcut implements Pointcut {
 
-    private Class<? extends Annotation>[] pointcutTypes= new Class[]{Metrics.class};
+    private Log logger= LogFactory.getLog(ServiceTypePointcut.class);
+
+    private Class<? extends Annotation>[] pointcutTypes= new Class[]{ServiceMetrics.class};
 
     final private MetricsMethodMatcher metricsMethodMatcher;
 
-    public MetricsTypePointcut(){
+    public ServiceTypePointcut(){
         metricsMethodMatcher= new MetricsMethodMatcher();
     }
 
@@ -31,8 +38,21 @@ public class MetricsTypePointcut implements Pointcut {
         return metricsMethodMatcher;
     }
 
-    public void setPointcutTypes(Class<? extends Annotation>[] pointcutTypes){
-        this.pointcutTypes= pointcutTypes;
+    public void setServicePointcutTypes(String servicePointcutTypes){
+        if(!StringUtils.isEmpty(servicePointcutTypes)){
+            List<Class<? extends Annotation>> result= new LinkedList<Class<? extends Annotation>>();
+            for(String each: servicePointcutTypes.split(",")){
+                try {
+                    ClassLoader loader= Thread.currentThread().getContextClassLoader();
+                    result.add((Class<? extends Annotation>)loader.loadClass(each));
+                } catch (ClassNotFoundException e) {
+                    logger.error(e);
+                }
+            }
+            if(!CollectionUtils.isEmpty(result)) {
+                this.pointcutTypes = result.toArray(new Class[result.size()]);
+            }
+        }
     }
 
     private class MetricsMethodMatcher implements MethodMatcher {
@@ -40,7 +60,6 @@ public class MetricsTypePointcut implements Pointcut {
         private MetricsMethodMatcher(){
         }
 
-        /** {@inheritDoc} */
         @Override
         @SuppressWarnings({ "unchecked", "rawtypes" })
         public boolean matches(Method method, Class targetClass) {
@@ -49,10 +68,12 @@ public class MetricsTypePointcut implements Pointcut {
                     if (targetClass.isAnnotationPresent(each)
                             || method.getDeclaringClass().isAnnotationPresent(each)
                             || method.isAnnotationPresent(each)
-                            || targetClass.getDeclaredMethod(method.getName(), method.getParameterTypes()).isAnnotationPresent(each)) {
+                            || targetClass.getMethod(method.getName(), method.getParameterTypes()).isAnnotationPresent(each)) {
                         return true;
                     }
-                }catch (Exception e){}
+                }catch (Exception e){
+                    //logger.error(e,e);
+                }
             }
             return false;
         }

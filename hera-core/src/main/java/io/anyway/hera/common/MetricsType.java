@@ -12,5 +12,6 @@ public enum MetricsType {
     WORKTHREAD,
     SYSTHREAD,
     CPU,
-    MEMORY
+    MEMORY,
+    MEMORYGARBAGE
 }

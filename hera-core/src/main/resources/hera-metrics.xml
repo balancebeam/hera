@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<!-- 监控管理器 -->
+	<bean class="io.anyway.hera.common.MetricsManager">
+		<property name="group" value="${hera.group:default}"/>
+	</bean>
+
+	<!-- 连接池采集器 -->
+	<bean id="dataSourceCollector" class="io.anyway.hera.jdbc.DataSourceCollector">
+		<property name="leakInterestTracePackages">
+			<value>${hera.jdbc.tracePackages:}</value>
+		</property>
+		<property name="excludedDatasources">
+			<value>${hera.jdbc.excludedDatasources:}</value>
+		</property>
+		<property name="configMetadata">
+			<value>${hera.jdbc.configMetadata:}</value>
+		</property>
+	</bean>
+	<!-- 线程池采集器 -->
+	<bean id="threadPoolCollector" class="io.anyway.hera.concurrent.ThreadPoolCollector"/>
+	<!-- 处理器采集器 -->
+	<bean id="cpuCollector" class="io.anyway.hera.jvm.CpuCollector"/>
+	<!-- 内存采集器 -->
+	<bean id="memoryCollector" class="io.anyway.hera.jvm.MemoryCollector"/>
+
+	<!-- 定时采集器 -->
+	<bean class="io.anyway.hera.scheduler.MetricsCollectorTimer">
+		<property name="delay" value="${hera.timer.delay:5000}"/>
+		<property name="period" value="${hera.time.period:10000}"/>
+		<property name="collectors">
+			<list>
+				<ref bean="dataSourceCollector"/>
+				<ref bean="threadPoolCollector"/>
+				<ref bean="cpuCollector"/>
+				<ref bean="memoryCollector"/>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 自动代理某对象,如数据源和线程池 -->
+	<bean class="io.anyway.hera.spring.MetricsBeanPostProcessor">
+		<property name="beanPostProcessorWrappers">
+			<list>
+				<ref bean="dataSourceCollector"></ref>
+				<ref bean="threadPoolCollector"></ref>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 服务方法拦截器 -->
+	<bean class="org.springframework.aop.support.DefaultPointcutAdvisor">
+		<property name="advice">
+			<bean class="io.anyway.hera.service.ServiceMethodAdvisor"/>
+		</property>
+		<property name="pointcut">
+			<bean class="io.anyway.hera.service.ServiceTypePointcut">
+				<property name="servicePointcutTypes">
+					<value>${hera.service.pointcutTypes:}</value>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<aop:aspectj-autoproxy/>
+
+</beans>

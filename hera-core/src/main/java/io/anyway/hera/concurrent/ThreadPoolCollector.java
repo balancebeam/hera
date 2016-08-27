@@ -1,8 +1,8 @@
 package io.anyway.hera.concurrent;
 
 import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsUnifiedCollector;
-import io.anyway.hera.scheduler.MetricsProcessor;
+import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.common.MetricsCollector;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -17,9 +17,9 @@ import java.util.*;
 /**
  * Created by yangzz on 16/8/19.
  */
-public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,MetricsProcessor {
+public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsCollector {
 
-    private Log logger= LogFactory.getLog(ThreadPoolBeanPostProcessor.class);
+    private Log logger= LogFactory.getLog(ThreadPoolCollector.class);
 
     private final static Map<String,ThreadPoolTaskExecutor> threadPools= new LinkedHashMap<String,ThreadPoolTaskExecutor>();
 
@@ -49,7 +49,7 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
     }
 
     @Override
-    public void doMonitor() {
+    public void doCollect() {
         //工作线程池收集
         for (Map.Entry<String,ThreadPoolTaskExecutor> each: threadPools.entrySet()){
             ThreadPoolTaskExecutor executor= each.getValue();
@@ -63,7 +63,7 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
             //活跃的线程数
             payload.put("activeCount",executor.getActiveCount());
             //核心的线程数
-            payload.put("poolSize",executor.getPoolSize());
+            payload.put("corePoolSize",executor.getPoolSize());
             //超时时间
             payload.put("keepAliveSeconds",executor.getKeepAliveSeconds());
             Field f= ReflectionUtils.findField(ThreadPoolTaskExecutor.class,"queueCapacity");
@@ -74,9 +74,9 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
             //任务数包括队列和正在执行的任务
             payload.put("taskCount",executor.getThreadPoolExecutor().getTaskCount());
             //采集的当前时间
-            payload.put("timestamp",System.currentTimeMillis());
+            payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
             //发送监控数据
-            MetricsUnifiedCollector.collect(MetricsType.WORKTHREAD,payload);
+            MetricsManager.collect(MetricsType.WORKTHREAD,payload);
         }
         //系统线程池收集
         ThreadMXBean instance = ManagementFactory.getThreadMXBean();
@@ -93,8 +93,8 @@ public class ThreadPoolBeanPostProcessor implements BeanPostProcessorWrapper,Met
         //当前线程用户模式中的cpu执行时间
         payload.put("currentThreadUserTime",instance.getCurrentThreadUserTime());
         //采集的当前时间
-        payload.put("timestamp",System.currentTimeMillis());
+        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
         //发送监控数据
-        MetricsUnifiedCollector.collect(MetricsType.SYSTHREAD,payload);
+        MetricsManager.collect(MetricsType.SYSTHREAD,payload);
     }
 }

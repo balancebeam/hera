@@ -5,7 +5,7 @@ import java.util.Stack;
 /**
  * Created by yangzz on 16/8/16.
  */
-public class MetricsContext {
+public class MetricsTraceContext {
 
     /**
      * 调用链标识

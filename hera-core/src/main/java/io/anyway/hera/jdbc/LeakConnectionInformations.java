@@ -19,20 +19,19 @@ package io.anyway.hera.jdbc;
 
 import java.io.Serializable;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.*;
 
-public class ConnectionInformations implements Serializable {
+public class LeakConnectionInformations implements Serializable {
 	private static final long serialVersionUID = -6063966419161604125L;
-	private static final String OWN_PACKAGE = ConnectionInformations.class.getName().substring(0,
-			ConnectionInformations.class.getName().lastIndexOf('.'));
+	private static final String OWN_PACKAGE = LeakConnectionInformations.class.getName().substring(0,
+			LeakConnectionInformations.class.getName().lastIndexOf('.'));
 
-	static List<String> TRACE_INTEREST_PACKAGES = Collections.EMPTY_LIST;
+	static List<String> LEAK_INTEREST_TRACE_PACKAGES = Collections.EMPTY_LIST;
 	private final long openingTime;
 	private final StackTraceElement[] openingStackTrace;
 	private final long threadId;
 
-	ConnectionInformations() {
+	LeakConnectionInformations() {
 		this.openingTime = System.currentTimeMillis();
 		final Thread currentThread = Thread.currentThread();
 		this.openingStackTrace = currentThread.getStackTrace();
@@ -57,10 +56,10 @@ public class ConnectionInformations implements Serializable {
 		while (stackTrace.get(0).getClassName().startsWith(OWN_PACKAGE)) {
 			stackTrace.remove(0);
 		}
-		if(!TRACE_INTEREST_PACKAGES.isEmpty()){
+		if(!LEAK_INTEREST_TRACE_PACKAGES.isEmpty()){
 			for(int i=stackTrace.size()-1;i>=0;i--){
 				String clsName= stackTrace.get(i).getClassName();
-				for(String each: TRACE_INTEREST_PACKAGES){
+				for(String each: LEAK_INTEREST_TRACE_PACKAGES){
 					if(!clsName.startsWith(each)){
 						stackTrace.remove(i);
 						break;
