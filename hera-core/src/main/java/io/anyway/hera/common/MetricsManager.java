@@ -46,9 +46,9 @@ public class MetricsManager implements InitializingBean,ApplicationListener<Cont
         MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
         if(ctx!= null){
             //设置跟踪链的唯一标识
-            fieldPayload.put("transactionId",ctx.getTransactionId());
+            fieldPayload.put("transactionId",ctx.getTraceId());
             //设置跟踪链栈信息
-            fieldPayload.put("transactionTrace",ctx.getTransactionTrace().toString());
+            fieldPayload.put("transactionTrace",ctx.getTraceStack().toString());
             //设置用户请求的地址
             fieldPayload.put("remote",ctx.getRemote());
         }

@@ -3,7 +3,7 @@ package io.anyway.hera.service;
 
 import io.anyway.hera.common.MetricsType;
 import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.common.TransactionIdGenerator;
+import io.anyway.hera.common.TraceIdGenerator;
 import io.anyway.hera.context.MetricsTraceContext;
 import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.aopalliance.intercept.MethodInterceptor;
@@ -40,10 +40,10 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
         //把当前的路径入栈
         if (ctx!= null) {
             //自动生成方法标识
-            String atomId= TransactionIdGenerator.next();
+            String atomId= TraceIdGenerator.next();
             //设置该请求的唯一ID
             payload.put("atomId",atomId);
-            ctx.getTransactionTrace().add(atomId);
+            ctx.getTraceStack().add(atomId);
         }
         try{
             return invocation.proceed();
@@ -55,7 +55,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
         finally {
             //把当前的路径出栈
             if (ctx!= null) {
-                ctx.getTransactionTrace().pop();
+                ctx.getTraceStack().pop();
             }
             //记录结束时间
             long endTime= System.currentTimeMillis();

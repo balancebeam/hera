@@ -109,12 +109,14 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,ServletCont
             if (isExcludedDataSource(beanName)) {
                 return bean;
             }
-            final DataSource dataSource = (DataSource) bean;
-            JdbcWrapper jdbcWrapper= new JdbcWrapper(servletContext);
-            jdbcWrappers.put(beanName,jdbcWrapper);
-            final DataSource result = jdbcWrapper.createDataSourceProxy(beanName,dataSource);
-            logger.info("Spring datasource wrapped: " + beanName);
-            return result;
+            if(!jdbcWrappers.containsKey(beanName)) {
+                final DataSource dataSource = (DataSource) bean;
+                JdbcWrapper jdbcWrapper = new JdbcWrapper(servletContext);
+                jdbcWrappers.put(beanName, jdbcWrapper);
+                final DataSource result = jdbcWrapper.createDataSourceProxy(beanName, dataSource);
+                logger.info("Spring datasource wrapped: " + beanName);
+                return result;
+            }
         } else if (bean instanceof JndiObjectFactoryBean) {
             if (isExcludedDataSource(beanName)) {
                 return bean;

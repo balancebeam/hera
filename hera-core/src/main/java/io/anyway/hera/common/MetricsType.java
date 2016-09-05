@@ -13,5 +13,5 @@ public enum MetricsType {
     SYSTHREAD,
     CPU,
     MEMORY,
-    MEMORYGARBAGE
+    GC
 }

@@ -87,7 +87,7 @@ public class MemoryCollector implements MetricsCollector {
             //采集时间
             payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
             //发送采集信息
-            MetricsManager.collect(MetricsType.MEMORYGARBAGE,payload);
+            MetricsManager.collect(MetricsType.GC,payload);
         }
     }
 

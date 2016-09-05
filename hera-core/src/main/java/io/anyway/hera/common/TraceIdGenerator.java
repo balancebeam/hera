@@ -5,12 +5,12 @@ import com.sohu.idcenter.IdWorker;
 /**
  * Created by xiong.j on 2016/7/22.
  */
-public class TransactionIdGenerator {
-    private final static TransactionIdGenerator transactionIdGenerator = new TransactionIdGenerator();
+public class TraceIdGenerator {
+    private final static TraceIdGenerator TRACE_ID_GENERATOR = new TraceIdGenerator();
 
     private IdWorker idWorker;
 
-    private TransactionIdGenerator() {
+    private TraceIdGenerator() {
         getIdWorker();
     }
 
@@ -21,6 +21,6 @@ public class TransactionIdGenerator {
     }
 
     public static String next() {
-        return ""+transactionIdGenerator.idWorker.getId();
+        return ""+ TRACE_ID_GENERATOR.idWorker.getId();
     }
 }

@@ -3,7 +3,7 @@ package io.anyway.hera.web;
 import io.anyway.hera.common.Constants;
 import io.anyway.hera.common.MetricsType;
 import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.common.TransactionIdGenerator;
+import io.anyway.hera.common.TraceIdGenerator;
 import io.anyway.hera.context.MetricsTraceContext;
 import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.slf4j.MDC;
@@ -29,31 +29,31 @@ public class MetricsFilter implements Filter {
 
         //获取传入跟踪链的信息
         HttpServletRequest request= (HttpServletRequest)req;
-        String transactionId= request.getHeader(Constants.TRANSACTION_ID);
-        String transactionTraces= request.getHeader(Constants.TRANSACTION_TRACE);
-        if(StringUtils.isEmpty(transactionId)){
-            transactionId= request.getParameter(Constants.TRANSACTION_ID);
-            transactionTraces= request.getParameter(Constants.TRANSACTION_TRACE);
+        String traceId= request.getHeader(Constants.TRACE_ID);
+        String traceStrackInput= request.getHeader(Constants.TRACE_STACK);
+        if(StringUtils.isEmpty(traceId)){
+            traceId= request.getParameter(Constants.TRACE_ID);
+            traceStrackInput= request.getParameter(Constants.TRACE_STACK);
         }
-        Stack<String> transactionTrace= new Stack<String>();
+        Stack<String> traceStack= new Stack<String>();
         //如果调用链为空则需要创建一个调用链
-        if(StringUtils.isEmpty(transactionId)){
-            transactionId= TransactionIdGenerator.next();
-            if(!StringUtils.isEmpty(transactionTraces)) {
-                transactionTrace.addAll(Arrays.asList(transactionTraces.split(",")));
+        if(StringUtils.isEmpty(traceId)){
+            traceId= TraceIdGenerator.next();
+            if(!StringUtils.isEmpty(traceStrackInput)) {
+                traceStack.addAll(Arrays.asList(traceStrackInput.split(",")));
             }
         }
         //把跟踪链的信息绑定到日志里,方便做日志跟踪
-        MDC.put("transactionId",transactionId);
+        MDC.put("traceId",traceId);
         //构造监控上下文
         MetricsTraceContext ctx= new MetricsTraceContext();
-        ctx.setTransactionId(transactionId);
-        ctx.setTransactionTrace(transactionTrace);
+        ctx.setTraceId(traceId);
+        ctx.setTraceStack(traceStack);
         ctx.setRemote(request.getRemoteHost());
         //绑定监控上下文到Threadlocal
         MetricsTraceContextHolder.setMetricsTraceContext(ctx);
 
-        String atomId= TransactionIdGenerator.next();
+        String atomId= TraceIdGenerator.next();
         long beginTime= System.currentTimeMillis();
 
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
@@ -71,7 +71,7 @@ public class MetricsFilter implements Filter {
         MetricsManager.collect(MetricsType.HTTP,payload);
 
         //把当前的路径入栈
-        transactionTrace.add(atomId);
+        traceStack.add(atomId);
         try{
             //调用过滤链
             chain.doFilter(req,res);
@@ -91,7 +91,7 @@ public class MetricsFilter implements Filter {
         }
         finally{
             //把当前的路径出栈
-            transactionTrace.pop();
+            traceStack.pop();
             //记录结束时间
             long endTime= System.currentTimeMillis();
             //记录请求结束时间

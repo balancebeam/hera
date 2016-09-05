@@ -10,32 +10,32 @@ public class MetricsTraceContext {
     /**
      * 调用链标识
      */
-    private String transactionId;
+    private String traceId;
 
     /**
      * 调用链栈
      */
-    private Stack<String> transactionTrace;
+    private Stack<String> traceStack;
 
     /**
      * 调用者信息
      */
     private String remote;
 
-    public String getTransactionId() {
-        return transactionId;
+    public String getTraceId() {
+        return traceId;
     }
 
-    public void setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
     }
 
-    public Stack<String> getTransactionTrace() {
-        return transactionTrace;
+    public Stack<String> getTraceStack() {
+        return traceStack;
     }
 
-    public void setTransactionTrace(Stack<String> transactionTrace) {
-        this.transactionTrace = transactionTrace;
+    public void setTraceStack(Stack<String> traceStack) {
+        this.traceStack = traceStack;
     }
 
     public String getRemote() {
