@@ -65,6 +65,8 @@ public class MetricsFilter implements Filter {
         payload.put("action","in");
         //设置请求的http URL
         payload.put("url",request.getContextPath()+request.getServletPath());
+        //设置异常默认为false
+        payload.put("exception",false);
         //记录请求开始时间
         payload.put("timestamp",MetricsManager.toLocalDate(beginTime));
         //发送监控记录

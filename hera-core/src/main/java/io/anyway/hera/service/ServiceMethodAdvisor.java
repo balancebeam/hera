@@ -33,18 +33,23 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
         payload.put("service",invocation.getThis().getClass().getName()+"."+invocation.getMethod().getName());
         //记录请求开始时间
         payload.put("timestamp",MetricsManager.toLocalDate(beginTime));
-        //发送监控记录
-        MetricsManager.collect(MetricsType.SERVICE,payload);
+        //设置异常默认为false
+        payload.put("exception",false);
         //获取监控上下文
         MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+        //自动生成方法标识
+        String atomId= TraceIdGenerator.next();
         //把当前的路径入栈
         if (ctx!= null) {
-            //自动生成方法标识
-            String atomId= TraceIdGenerator.next();
             //设置该请求的唯一ID
             payload.put("atomId",atomId);
             ctx.getTraceStack().add(atomId);
         }
+        else{
+            payload.put("atomId","asyn-"+atomId);
+        }
+        //发送监控记录
+        MetricsManager.collect(MetricsType.SERVICE,payload);
         try{
             return invocation.proceed();
         }catch (Throwable e){

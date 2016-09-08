@@ -136,6 +136,10 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,ServletCont
             payload.put("name",each.getKey());
             payload.put("maxActive",jdbcWrapper.getMaxActive());
             payload.put("maxWait",jdbcWrapper.getMaxWait());
+            payload.put("url",jdbcWrapper.getUrl());
+            payload.put("initialSize",jdbcWrapper.getInitialSize());
+            payload.put("maxIdle",jdbcWrapper.getMaxIdle());
+            payload.put("minIdle",jdbcWrapper.getMinIdle());
             payload.put("activeCount",jdbcWrapper.getActiveConnectionCount());
             payload.put("usedCount",jdbcWrapper.getUsedConnectionCount());
             payload.put("leakCount",jdbcWrapper.getHoldedConnectionCount());

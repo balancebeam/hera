@@ -46,11 +46,14 @@ public class MetricsManager implements InitializingBean,ApplicationListener<Cont
         MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
         if(ctx!= null){
             //设置跟踪链的唯一标识
-            fieldPayload.put("transactionId",ctx.getTraceId());
+            fieldPayload.put("traceId",ctx.getTraceId());
             //设置跟踪链栈信息
-            fieldPayload.put("transactionTrace",ctx.getTraceStack().toString());
+            fieldPayload.put("traceStack",ctx.getTraceStack().toString());
             //设置用户请求的地址
             fieldPayload.put("remote",ctx.getRemote());
+        }
+        if(logger.isDebugEnabled()){
+            logger.debug("type: "+type+" payload: "+ fieldPayload);
         }
         if(handler!=null) {
             try {
@@ -68,6 +71,7 @@ public class MetricsManager implements InitializingBean,ApplicationListener<Cont
         angular.put("group",group);
         angular.put("host",host);
         angular = Collections.unmodifiableMap(angular);
+        logger.info("Metrics Angular: "+angular);
     }
 
     @Override

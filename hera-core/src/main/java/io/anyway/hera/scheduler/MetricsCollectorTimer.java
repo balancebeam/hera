@@ -14,7 +14,7 @@ import java.util.TimerTask;
  */
 public class MetricsCollectorTimer extends TimerTask implements ApplicationListener<ContextRefreshedEvent>,DisposableBean {
 
-    private Timer timer = new Timer();
+    private Timer timer;
 
     private int delay= 1000;
 
@@ -47,12 +47,17 @@ public class MetricsCollectorTimer extends TimerTask implements ApplicationListe
 
     @Override
     public void destroy() throws Exception {
-        timer.cancel();
+        if(timer!=null) {
+            timer.cancel();
+        }
     }
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
-        //系统初始化完毕自动采集监控信息
-        timer.schedule(this,delay,period);
+        if(timer== null) {
+            timer = new Timer();
+            //系统初始化完毕自动采集监控信息
+            timer.schedule(this, delay, period);
+        }
     }
 }

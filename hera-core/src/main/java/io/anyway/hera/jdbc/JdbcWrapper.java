@@ -2,6 +2,8 @@ package io.anyway.hera.jdbc;
 
 import io.anyway.hera.common.MetricsType;
 import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.context.MetricsTraceContext;
+import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,25 +34,12 @@ class JdbcWrapper {
 
     static {
         String[] metadata= {
-            "poolPreparedStatements",
-            "defaultCatalog",
-            "defaultAutoCommit",
-            "defaultReadOnly",
-            "defaultTransactionIsolation",
-            "driverClassName",
+            "url",
             "initialSize",
-            "maxIdle",
             "maxActive",
-            "maxOpenPreparedStatements",
             "maxWait",
-            "minEvictableIdleTimeMillis",
-            "minIdle",
-            "numTestsPerEvictionRun",
-            "testOnBorrow",
-            "testOnReturn",
-            "testWhileIdle",
-            "timeBetweenEvictionRunsMillis",
-            "validationQuery"
+            "maxIdle",
+            "minIdle"
         };
         for(String each: metadata){
             DATASOURCE_CONFIG_METADATA.put(each,each);
@@ -271,6 +260,7 @@ class JdbcWrapper {
             }
         }
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
+        payload.put("exception",false);
         final long beginTime = System.currentTimeMillis();
         try {
             ACTIVE_CONNECTION_COUNT.incrementAndGet();
@@ -288,8 +278,10 @@ class JdbcWrapper {
             ACTIVE_CONNECTION_COUNT.decrementAndGet();
 
             long endTime= System.currentTimeMillis();
-            //设置类别为http
-            //payload.put("category","sql");
+            MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+            if(ctx!=null){
+                payload.put("traceId",ctx.getTraceId());
+            }
             //设置调用方法名称
             payload.put("sql",requestName);
             //记录请求开始时间
@@ -412,6 +404,31 @@ class JdbcWrapper {
     int getMaxWait(){
         if(DATASOURCE_CONFIG_PROPERTIES.containsKey("maxWait")){
             return Integer.parseInt(DATASOURCE_CONFIG_PROPERTIES.get("maxWait").toString());
+        }
+        return -1;
+    }
+    String getUrl(){
+        if(DATASOURCE_CONFIG_PROPERTIES.containsKey("url")){
+            return (String)DATASOURCE_CONFIG_PROPERTIES.get("url");
+        }
+        return "------";
+    }
+
+    int getInitialSize(){
+        if(DATASOURCE_CONFIG_PROPERTIES.containsKey("initialSize")){
+            return Integer.parseInt(DATASOURCE_CONFIG_PROPERTIES.get("initialSize").toString());
+        }
+        return -1;
+    }
+    int getMaxIdle(){
+        if(DATASOURCE_CONFIG_PROPERTIES.containsKey("maxIdle")){
+            return Integer.parseInt(DATASOURCE_CONFIG_PROPERTIES.get("maxIdle").toString());
+        }
+        return -1;
+    }
+    int getMinIdle(){
+        if(DATASOURCE_CONFIG_PROPERTIES.containsKey("minIdle")){
+            return Integer.parseInt(DATASOURCE_CONFIG_PROPERTIES.get("minIdle").toString());
         }
         return -1;
     }
