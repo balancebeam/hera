@@ -6,6 +6,7 @@ import io.anyway.hera.common.MetricsCollector;
 import org.apache.commons.beanutils.BeanUtils;
 
 import java.lang.management.*;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,22 +16,24 @@ import java.util.Map;
  */
 public class MemoryCollector implements MetricsCollector {
 
+    private long m_unit= 1024*1024;
+
     @Override
     public void doCollect() {
 
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
         //虚拟机最大内存
-        payload.put("maxMemory",Runtime.getRuntime().maxMemory());
+        payload.put("maxMemory",b2m(Runtime.getRuntime().maxMemory()));
         //已经使用的虚机内存
-        payload.put("usedMemory",Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+        payload.put("usedMemory",b2m(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
         //获取永久带内存
         MemoryPoolMXBean permGenMemoryPool= getPermGenMemoryPool();
         if (permGenMemoryPool != null) {
             MemoryUsage usage = permGenMemoryPool.getUsage();
             //最大永久带内存
-            payload.put("maxPermGen",usage.getMax());
+            payload.put("maxPermGen",b2m(usage.getMax()));
             //已使用的久带内存
-            payload.put("usedPerGen",usage.getUsed());
+            payload.put("usedPerGen",b2m(usage.getUsed()));
         }
         else{
             payload.put("maxPermGen",-1);
@@ -41,15 +44,15 @@ public class MemoryCollector implements MetricsCollector {
         //得到非堆内存对象
         MemoryUsage memoryUsage= ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
         //最大非对内存
-        payload.put("maxNonHeapMemory",memoryUsage.getMax());
+        payload.put("maxNonHeapMemory",b2m(memoryUsage.getMax()));
         //使用的非对内存
-        payload.put("usedNonHeapMemory",memoryUsage.getUsed());
+        payload.put("usedNonHeapMemory",b2m(memoryUsage.getUsed()));
         //获取堆内存对象
         memoryUsage= ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         //最大堆内存
-        payload.put("maxHeapMemory",memoryUsage.getMax());
+        payload.put("maxHeapMemory",b2m(memoryUsage.getMax()));
         //已使用的久带内存
-        payload.put("usedHeapMemory",memoryUsage.getUsed());
+        payload.put("usedHeapMemory",b2m(memoryUsage.getUsed()));
         //获取操作系统对象
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
         String[] sysoprops= {
@@ -62,7 +65,7 @@ public class MemoryCollector implements MetricsCollector {
         if (isSunOsMBean(operatingSystem)) {
             for(String each: sysoprops){
                 try{
-                    payload.put(each,Long.parseLong(BeanUtils.getProperty(operatingSystem,each)));
+                    payload.put(each,b2m(Long.parseLong(BeanUtils.getProperty(operatingSystem,each))));
                 }catch (Exception e){
                     payload.put(each, -1);
                 }
@@ -95,7 +98,7 @@ public class MemoryCollector implements MetricsCollector {
         }
     }
 
-    private static MemoryPoolMXBean getPermGenMemoryPool() {
+    private MemoryPoolMXBean getPermGenMemoryPool() {
         for (final MemoryPoolMXBean memoryPool : ManagementFactory.getMemoryPoolMXBeans()) {
             //java 8 use "Metaspace" instead of "Perm Gen"
             if (memoryPool.getName().matches("Perm\\sGen|Metaspace")) {
@@ -103,6 +106,14 @@ public class MemoryCollector implements MetricsCollector {
             }
         }
         return null;
+    }
+
+    private double b2m(long val){
+        if(val<0){
+            return val;
+        }
+        BigDecimal decimal= new BigDecimal(val/m_unit);
+        return decimal.setScale(2,BigDecimal.ROUND_HALF_UP).doubleValue();
     }
 
     private boolean isSunOsMBean(OperatingSystemMXBean operatingSystem) {
