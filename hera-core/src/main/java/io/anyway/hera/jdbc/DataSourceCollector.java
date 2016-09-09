@@ -73,7 +73,8 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,ServletCont
             logger.info("Spring datasource excluded: " + beanName);
             return true;
         }
-        return false;
+        //如果是内部类不需要被代理
+        return beanName.matches("\\(inner bean\\).+");
     }
 
     private Object createProxy(final Object bean, final String beanName) {

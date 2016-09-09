@@ -59,8 +59,6 @@ public class MetricsFilter implements Filter {
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
         //设置该请求的唯一ID
         payload.put("atomId",atomId);
-        //设置类别为http
-        //payload.put("category","http");
         //设置行为规则为进入
         payload.put("action","in");
         //设置请求的http URL

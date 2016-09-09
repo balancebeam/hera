@@ -16,9 +16,9 @@ public class MetricsCollectorTimer extends TimerTask implements ApplicationListe
 
     private Timer timer;
 
-    private int delay= 1000;
+    private int delay= 5000;
 
-    private int period= 1000;
+    private int period= 5000;
 
     private List<MetricsCollector> collectors;
 

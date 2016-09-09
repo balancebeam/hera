@@ -1,9 +1,8 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.common.MetricsType;
 import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.common.MetricsType;
+import io.anyway.hera.common.TraceIdGenerator;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -278,10 +277,7 @@ class JdbcWrapper {
             ACTIVE_CONNECTION_COUNT.decrementAndGet();
 
             long endTime= System.currentTimeMillis();
-            MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
-            if(ctx!=null){
-                payload.put("traceId",ctx.getTraceId());
-            }
+            payload.put("atomId",TraceIdGenerator.next());
             //设置调用方法名称
             payload.put("sql",requestName);
             //记录请求开始时间

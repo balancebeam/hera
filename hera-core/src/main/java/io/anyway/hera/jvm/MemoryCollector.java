@@ -3,6 +3,7 @@ package io.anyway.hera.jvm;
 import io.anyway.hera.common.MetricsType;
 import io.anyway.hera.common.MetricsManager;
 import io.anyway.hera.common.MetricsCollector;
+import org.apache.commons.beanutils.BeanUtils;
 
 import java.lang.management.*;
 import java.util.Arrays;
@@ -47,26 +48,29 @@ public class MemoryCollector implements MetricsCollector {
         memoryUsage= ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         //最大堆内存
         payload.put("maxHeapMemory",memoryUsage.getMax());
-
         //已使用的久带内存
         payload.put("usedHeapMemory",memoryUsage.getUsed());
         //获取操作系统对象
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
+        String[] sysoprops= {
+            "totalPhysicalMemorySize", //最大物理内存
+            "freePhysicalMemorySize", //空闲物理内存
+            "totalSwapSpaceSize", //最大交换空间
+            "freeSwapSpaceSize" //空闲交换空间
+        };
+        //如果是Sun的JDK
         if (isSunOsMBean(operatingSystem)) {
-            com.sun.management.OperatingSystemMXBean sunOperatingSystem= (com.sun.management.OperatingSystemMXBean)operatingSystem;
-            //最大物理内存
-            payload.put("totalPhysicalMemory",sunOperatingSystem.getTotalPhysicalMemorySize());
-            //空闲物理内存
-            payload.put("freePhysicalMemory",sunOperatingSystem.getFreePhysicalMemorySize());
-            //最大交换空间
-            payload.put("totalSwapSpace",sunOperatingSystem.getTotalSwapSpaceSize());
-            //空闲交换空间
-            payload.put("freeSwapSpace",sunOperatingSystem.getFreeSwapSpaceSize());
+            for(String each: sysoprops){
+                try{
+                    payload.put(each,Long.parseLong(BeanUtils.getProperty(operatingSystem,each)));
+                }catch (Exception e){
+                    payload.put(each, -1);
+                }
+            }
         } else {
-            payload.put("totalPhysicalMemory",-1);
-            payload.put("freePhysicalMemory",-1);
-            payload.put("totalSwapSpace",-1);
-            payload.put("freeSwapSpace",-1);
+           for(String each: sysoprops){
+               payload.put(each, -1);
+           }
         }
         //采集时间
         payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
@@ -93,7 +97,8 @@ public class MemoryCollector implements MetricsCollector {
 
     private static MemoryPoolMXBean getPermGenMemoryPool() {
         for (final MemoryPoolMXBean memoryPool : ManagementFactory.getMemoryPoolMXBeans()) {
-            if (memoryPool.getName().endsWith("Perm Gen")) {
+            //java 8 use "Metaspace" instead of "Perm Gen"
+            if (memoryPool.getName().matches("Perm\\sGen|Metaspace")) {
                 return memoryPool;
             }
         }

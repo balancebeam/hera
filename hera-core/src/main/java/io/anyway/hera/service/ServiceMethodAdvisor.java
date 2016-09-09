@@ -23,10 +23,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
     public Object invoke(MethodInvocation invocation) throws Throwable {
 
         Map<String,Object> payload= new LinkedHashMap<String,Object>();
-
         long beginTime= System.currentTimeMillis();
-        //设置类别为http
-        //payload.put("category","service");
         //设置行为规则为进入
         payload.put("action","in");
         //设置调用方法名称
@@ -35,18 +32,15 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
         payload.put("timestamp",MetricsManager.toLocalDate(beginTime));
         //设置异常默认为false
         payload.put("exception",false);
-        //获取监控上下文
-        MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
         //自动生成方法标识
         String atomId= TraceIdGenerator.next();
+        //设置该请求的唯一ID
+        payload.put("atomId",atomId);
+        //获取监控上下文
+        MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
         //把当前的路径入栈
         if (ctx!= null) {
-            //设置该请求的唯一ID
-            payload.put("atomId",atomId);
             ctx.getTraceStack().add(atomId);
-        }
-        else{
-            payload.put("atomId","asyn-"+atomId);
         }
         //发送监控记录
         MetricsManager.collect(MetricsType.SERVICE,payload);
@@ -73,7 +67,6 @@ public class ServiceMethodAdvisor implements MethodInterceptor,Ordered {
             //发送监控记录
             MetricsManager.collect(MetricsType.SERVICE,payload);
         }
-
     }
 
     @Override
