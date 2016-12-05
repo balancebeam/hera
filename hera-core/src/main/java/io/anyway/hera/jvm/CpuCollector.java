@@ -1,13 +1,12 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.collector.MetricsCollector;
 import org.apache.commons.beanutils.BeanUtils;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.lang.reflect.InvocationTargetException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -16,31 +15,36 @@ import java.util.Map;
  */
 public class CpuCollector implements MetricsCollector {
 
+    private MetricsHandler handler;
+
+    public void setHandler(MetricsHandler handler){
+        this.handler= handler;
+    }
+
     @Override
     public void doCollect() {
-        Map<String,Object> payload= new LinkedHashMap<String,Object>();
+        Map<String,Object> props= new LinkedHashMap<String,Object>();
         //获取操作系统
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
         //获取处理器核数
-        payload.put("availableProcessors",operatingSystem.getAvailableProcessors());
+        props.put("availableProcessors",operatingSystem.getAvailableProcessors());
         //操作系统名称
-        payload.put("name",operatingSystem.getName());
+        props.put("name",operatingSystem.getName());
         //操作系统版本号
-        payload.put("version",operatingSystem.getVersion());
+        props.put("version",operatingSystem.getVersion());
         //cpu负载值
         double loadedAverage= operatingSystem.getSystemLoadAverage();
-        payload.put("systemLoadAverage",loadedAverage);
+        props.put("systemLoadAverage",loadedAverage);
         //windows获取的cpu负载值为-1
         if(loadedAverage== -1.0 && isSunOsMBean(operatingSystem)){
             try {
                 loadedAverage= Double.parseDouble(BeanUtils.getProperty(operatingSystem,"systemCpuLoad"));
-                payload.put("systemLoadAverage", loadedAverage);
+                props.put("systemLoadAverage", loadedAverage);
             } catch (Exception e) {}
         }
-        //采集时间
-        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
+        props.put("timestamp",System.currentTimeMillis());
         //发送采集信息
-        MetricsManager.collect(MetricsType.CPU,payload);
+        handler.handle(MetricsQuota.CPU,null,props);
     }
 
     private boolean isSunOsMBean(OperatingSystemMXBean operatingSystem) {

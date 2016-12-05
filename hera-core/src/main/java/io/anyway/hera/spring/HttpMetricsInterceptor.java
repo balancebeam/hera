@@ -1,45 +1,50 @@
-package io.anyway.hera.web;
+package io.anyway.hera.spring;
 
 import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.Constants;
 import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.common.MetricsUtils;
 import io.anyway.hera.common.TraceIdGenerator;
 import io.anyway.hera.context.MetricsTraceContext;
 import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.slf4j.MDC;
-import org.springframework.context.ApplicationContext;
+import org.springframework.core.Ordered;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
-import java.io.IOException;
-import java.util.*;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Stack;
 
 /**
- * Created by yangzz on 16/8/16.
+ * Created by yangzz on 16/11/20.
  */
-public class MetricsFilter implements Filter {
+public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
 
-    private ServletContext servletContext;
+    private ThreadLocal<Map<String,Object>> holder= new ThreadLocal<Map<String,Object>>();
 
-    @Override
-    public void init(FilterConfig filterConfig) throws ServletException {
-        servletContext= filterConfig.getServletContext();
+    private MetricsHandler handler;
+
+    public void setHandler(MetricsHandler handler){
+        this.handler= handler;
     }
 
     @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+    public boolean preHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler) throws Exception {
+        holder.remove();
 
-        ApplicationContext applicationContext= MetricsUtils.getWebApplicationContext(servletContext);
-        MetricsHandler handler= applicationContext.getBean(MetricsHandler.class);
-        if(handler== null){
-            chain.doFilter(req,res);
-            return;
+        //如果在Filter处理过,或者嵌套拦截器处理过就不处理
+        if(MetricsTraceContextHolder.getMetricsTraceContext()!= null){
+            return true;
         }
 
-        HttpServletRequest request= (HttpServletRequest)req;
         //获取传入跟踪链的信息
         while(request instanceof HttpServletRequestWrapper){
             request= (HttpServletRequest)((HttpServletRequestWrapper)request).getRequest();
@@ -81,44 +86,58 @@ public class MetricsFilter implements Filter {
         props.put("beginTime", beginTime);
         //把当前的路径入栈
         traceStack.add(atomId);
+        holder.set(props);
 
-        try{
-            //调用过滤链
-            chain.doFilter(req,res);
-        }catch (Throwable ex){
-            //如果存在异常记录异常信息
+        return true;
+    }
+
+    @Override
+    public void postHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            ModelAndView modelAndView) throws Exception {
+
+    }
+
+    @Override
+    public void afterCompletion(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            Exception ex) throws Exception {
+        //获取拦截器preHandle中收集的内容
+        Map<String,Object> props= holder.get();
+        if(props== null){
+            return;
+        }
+        //处理异常
+        if(ex!= null){
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
             xtags.put("type", MetricsQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
             xprops.put("timestamp",System.currentTimeMillis());
-            handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+            this.handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+        }
 
-            if(ex instanceof IOException){
-                throw (IOException)ex;
-            }
-            if(ex instanceof ServletException){
-                throw (ServletException)ex;
-            }
-            if(ex instanceof RuntimeException){
-                throw (RuntimeException)ex;
-            }
-        }
-        finally{
-            MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
-            //记录结束时间
-            long endTime= System.currentTimeMillis();
-            props.put("timestamp",endTime);
-            //记录执行的时间
-            props.put("duration",endTime-beginTime);
-            //发送监控记录
-            handler.handle(MetricsQuota.HTTP,null,props);
-        }
+        MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
+        //记录结束时间
+        long endTime= System.currentTimeMillis();
+        //记录时间
+        props.put("timestamp",endTime);
+        //记录执行的时间
+        props.put("duration",endTime-(Long)props.get("beginTime"));
+        //发送监控记录
+        this.handler.handle(MetricsQuota.HTTP,null,props);
+        //清空上下文变量
+        MetricsTraceContextHolder.clear();
+        holder.remove();
     }
 
     @Override
-    public void destroy() {
-        //do noting
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

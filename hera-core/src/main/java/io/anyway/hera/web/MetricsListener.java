@@ -1,8 +1,11 @@
 package io.anyway.hera.web;
 
-import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsManager;
+import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.common.MetricsUtils;
+import org.springframework.context.ApplicationContext;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpSession;
@@ -26,8 +29,11 @@ public class MetricsListener implements HttpSessionListener, HttpSessionActivati
 
     private ConcurrentMap<String, HttpSession> SESSION_MAP_BY_ID = new ConcurrentHashMap<String, HttpSession>();
 
+    private ServletContext servletContext;
+
     @Override
     public void contextInitialized(ServletContextEvent sce) {
+        servletContext= sce.getServletContext();
     }
 
     @Override
@@ -91,11 +97,14 @@ public class MetricsListener implements HttpSessionListener, HttpSessionActivati
     }
 
     private void doMonitor(){
-        Map<String,Object> payload= new LinkedHashMap<String, Object>();
-        //payload.put("category","session");
-        payload.put("count",SESSION_COUNT.get());
-        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
-        MetricsManager.collect(MetricsType.SESSION,payload);
+        Map<String,Object> props= new LinkedHashMap<String, Object>();
+        props.put("count",SESSION_COUNT.get());
+        props.put("timestamp",System.currentTimeMillis());
+        ApplicationContext ctx= MetricsUtils.getWebApplicationContext(servletContext);
+        if(ctx!= null) {
+            MetricsHandler handler = ctx.getBean(MetricsHandler.class);
+            handler.handle(MetricsQuota.SESSION, null, props);
+        }
     }
 
 }

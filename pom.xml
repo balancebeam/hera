@@ -11,7 +11,8 @@
 	
 	<modules>
         <module>hera-core</module>
-      
+      	<module>hera-influxdb</module>
+      	<module>hera-demo-webapp</module>
     </modules>
 
 	<properties>

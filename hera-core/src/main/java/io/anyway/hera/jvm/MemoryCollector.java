@@ -1,8 +1,8 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.collector.MetricsCollector;
 import org.apache.commons.beanutils.BeanUtils;
 
 import java.lang.management.*;
@@ -18,41 +18,47 @@ public class MemoryCollector implements MetricsCollector {
 
     private long m_unit= 1024*1024;
 
+    private MetricsHandler handler;
+
+    public void setHandler(MetricsHandler handler){
+        this.handler= handler;
+    }
+
     @Override
     public void doCollect() {
 
-        Map<String,Object> payload= new LinkedHashMap<String,Object>();
+        Map<String,Object> props= new LinkedHashMap<String,Object>();
         //虚拟机最大内存
-        payload.put("maxMemory",b2m(Runtime.getRuntime().maxMemory()));
+        props.put("maxMemory",b2m(Runtime.getRuntime().maxMemory()));
         //已经使用的虚机内存
-        payload.put("usedMemory",b2m(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
+        props.put("usedMemory",b2m(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()));
         //获取永久带内存
         MemoryPoolMXBean permGenMemoryPool= getPermGenMemoryPool();
         if (permGenMemoryPool != null) {
             MemoryUsage usage = permGenMemoryPool.getUsage();
             //最大永久带内存
-            payload.put("maxPermGen",b2m(usage.getMax()));
+            props.put("maxPermGen",b2m(usage.getMax()));
             //已使用的久带内存
-            payload.put("usedPerGen",b2m(usage.getUsed()));
+            props.put("usedPerGen",b2m(usage.getUsed()));
         }
         else{
-            payload.put("maxPermGen",-1);
-            payload.put("usedPerGen",-1);
+            props.put("maxPermGen",-1);
+            props.put("usedPerGen",-1);
         }
         //加载的类数量
-        payload.put("loadedClassesCount",ManagementFactory.getClassLoadingMXBean().getLoadedClassCount());
+        props.put("loadedClassesCount",ManagementFactory.getClassLoadingMXBean().getLoadedClassCount());
         //得到非堆内存对象
         MemoryUsage memoryUsage= ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
         //最大非对内存
-        payload.put("maxNonHeapMemory",b2m(memoryUsage.getMax()));
+        props.put("maxNonHeapMemory",b2m(memoryUsage.getMax()));
         //使用的非对内存
-        payload.put("usedNonHeapMemory",b2m(memoryUsage.getUsed()));
+        props.put("usedNonHeapMemory",b2m(memoryUsage.getUsed()));
         //获取堆内存对象
         memoryUsage= ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         //最大堆内存
-        payload.put("maxHeapMemory",b2m(memoryUsage.getMax()));
+        props.put("maxHeapMemory",b2m(memoryUsage.getMax()));
         //已使用的久带内存
-        payload.put("usedHeapMemory",b2m(memoryUsage.getUsed()));
+        props.put("usedHeapMemory",b2m(memoryUsage.getUsed()));
         //获取操作系统对象
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
         String[] sysoprops= {
@@ -65,43 +71,42 @@ public class MemoryCollector implements MetricsCollector {
         if (isSunOsMBean(operatingSystem)) {
             for(String each: sysoprops){
                 try{
-                    payload.put(each,b2m(Long.parseLong(BeanUtils.getProperty(operatingSystem,each))));
+                    props.put(each,b2m(Long.parseLong(BeanUtils.getProperty(operatingSystem,each))));
                 }catch (Exception e){
-                    payload.put(each, -1);
+                    props.put(each, -1);
                 }
             }
         } else {
            for(String each: sysoprops){
-               payload.put(each, -1);
+               props.put(each, -1);
            }
         }
-        //采集时间
-        payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
         //发送采集信息
-        MetricsManager.collect(MetricsType.MEMORY,payload);
+        props.put("timestamp",System.currentTimeMillis());
+        handler.handle(MetricsQuota.MEMORY,null,props);
 
         //采集内存垃圾回收信息
         for(GarbageCollectorMXBean each: ManagementFactory.getGarbageCollectorMXBeans()){
-            payload= new LinkedHashMap<String,Object>();
+            props= new LinkedHashMap<String,Object>();
+            Map<String,String> tags= new LinkedHashMap<String, String>();
             //内存区名称
-            payload.put("name",each.getName());
+            tags.put("name",each.getName());
             //垃圾回收的次数
-            payload.put("collectionCount",each.getCollectionCount());
+            props.put("collectionCount",each.getCollectionCount());
             //垃圾回收持续的时间
-            payload.put("collectionTime",each.getCollectionTime());
+            props.put("collectionTime",each.getCollectionTime());
             //内存池名称
-            payload.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
-            //采集时间
-            payload.put("timestamp",MetricsManager.toLocalDate(System.currentTimeMillis()));
+            props.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
             //发送采集信息
-            MetricsManager.collect(MetricsType.GC,payload);
+            props.put("timestamp",System.currentTimeMillis());
+            handler.handle(MetricsQuota.GC,tags,props);
         }
     }
 
     private MemoryPoolMXBean getPermGenMemoryPool() {
         for (final MemoryPoolMXBean memoryPool : ManagementFactory.getMemoryPoolMXBeans()) {
             //java 8 use "Metaspace" instead of "Perm Gen"
-            if (memoryPool.getName().matches("Perm\\sGen|Metaspace")) {
+            if (memoryPool.getName().matches(".*Perm\\sGen|Metaspace")) {
                 return memoryPool;
             }
         }

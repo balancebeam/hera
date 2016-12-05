@@ -2,16 +2,27 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+            http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd">
 
 	<!-- 监控管理器 -->
-	<bean class="io.anyway.hera.common.MetricsManager">
+	<!--
+	<bean id="metricsHandler" class="io.anyway.hera.collector.support.InfoMetricsHandler">
 		<property name="group" value="${hera.group:default}"/>
+	</bean>
+	-->
+	<bean id="metricsHandler" class="io.anyway.hera.collector.support.KafkaMetricsHandler">
+		<property name="group" value="${hera.group:default}"/>
+		<property name="clientId" value="${hera.kafka.client.id:default}"/>
+		<property name="servers" value="${hera.kafka.servers}"/>
+		<property name="timeout" value="${hera.kafka.producer.timeout:30}"/>
 	</bean>
 
 	<!-- 连接池采集器 -->
 	<bean id="dataSourceCollector" class="io.anyway.hera.jdbc.DataSourceCollector">
+		<property name="handler" ref="metricsHandler"/>
 		<property name="leakInterestTracePackages">
 			<value>${hera.jdbc.tracePackages:}</value>
 		</property>
@@ -23,22 +34,29 @@
 		</property>
 	</bean>
 	<!-- 线程池采集器 -->
-	<bean id="threadPoolCollector" class="io.anyway.hera.concurrent.ThreadPoolCollector"/>
+	<bean id="threadPoolCollector" class="io.anyway.hera.concurrent.ThreadPoolCollector">
+		<property name="handler" ref="metricsHandler"/>
+	</bean>
 	<!-- 处理器采集器 -->
-	<bean id="cpuCollector" class="io.anyway.hera.jvm.CpuCollector"/>
+	<bean id="cpuCollector" class="io.anyway.hera.jvm.CpuCollector">
+		<property name="handler" ref="metricsHandler"/>
+	</bean>
 	<!-- 内存采集器 -->
-	<bean id="memoryCollector" class="io.anyway.hera.jvm.MemoryCollector"/>
+	<bean id="memoryCollector" class="io.anyway.hera.jvm.MemoryCollector">
+		<property name="handler" ref="metricsHandler"/>
+	</bean>
 
 	<!-- 定时采集器 -->
-	<bean class="io.anyway.hera.scheduler.MetricsCollectorTimer">
-		<property name="delay" value="${hera.timer.delay:5000}"/>
-		<property name="period" value="${hera.time.period:10000}"/>
+	<bean class="io.anyway.hera.collector.MetricsCollectorTimer">
+		<property name="delay" value="${hera.timer.delay:60000}"/>
+		<property name="period" value="${hera.timer.period:60000}"/>
 		<property name="collectors">
 			<list>
 				<ref bean="dataSourceCollector"/>
 				<ref bean="threadPoolCollector"/>
 				<ref bean="cpuCollector"/>
 				<ref bean="memoryCollector"/>
+				<ref bean="blockServiceCollector"/>
 			</list>
 		</property>
 	</bean>
@@ -53,11 +71,13 @@
 		</property>
 	</bean>
 
+	<bean id="blockServiceCollector" class="io.anyway.hera.service.ServiceMethodAdvisor">
+		<property name="handler" ref="metricsHandler"/>
+		<property name="pendingTime" value="${hera.service.pendingTime:300000}"/>
+	</bean>
 	<!-- 服务方法拦截器 -->
 	<bean class="org.springframework.aop.support.DefaultPointcutAdvisor">
-		<property name="advice">
-			<bean class="io.anyway.hera.service.ServiceMethodAdvisor"/>
-		</property>
+		<property name="advice" ref="blockServiceCollector"/>
 		<property name="pointcut">
 			<bean class="io.anyway.hera.service.ServiceTypePointcut">
 				<property name="servicePointcutTypes">
@@ -66,6 +86,12 @@
 			</bean>
 		</property>
 	</bean>
+
+	<mvc:interceptors>
+		<bean class="io.anyway.hera.spring.HttpMetricsInterceptor">
+			<property name="handler" ref="metricsHandler"/>
+		</bean>
+	</mvc:interceptors>
 
 	<aop:aspectj-autoproxy/>
 

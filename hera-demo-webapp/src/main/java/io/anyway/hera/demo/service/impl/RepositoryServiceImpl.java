@@ -49,8 +49,9 @@ public class RepositoryServiceImpl implements RepositoryService {
             }
             rs.close();
             statement.close();
+            //Thread.sleep(70000);
             //connection.close();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

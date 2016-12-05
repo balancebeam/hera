@@ -1,13 +1,11 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.common.MetricsManager;
-import io.anyway.hera.common.MetricsType;
-import io.anyway.hera.common.TraceIdGenerator;
+import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.MetricsQuota;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
@@ -28,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 class JdbcWrapper {
 
     private final static Log logger= LogFactory.getLog(JdbcWrapper.class);
+
+    private MetricsHandler handler;
 
     static Map<String,String> DATASOURCE_CONFIG_METADATA= new LinkedHashMap<String, String>();
 
@@ -54,27 +54,8 @@ class JdbcWrapper {
 
     private static final int MAX_USED_CONNECTION_INFORMATIONS = 500;
 
-    private ServletContext servletContext;
-
-    private boolean jboss;
-    private boolean glassfish;
-    private boolean weblogic;
-    private boolean jonas;
-
-    JdbcWrapper(ServletContext servletContext) {
-        this.servletContext = servletContext;
-        initServletContext(servletContext);
-    }
-
-    void initServletContext(ServletContext context) {
-        assert context != null;
-        this.servletContext = context;
-        final String serverInfo = servletContext.getServerInfo();
-        jboss = serverInfo.contains("JBoss") || serverInfo.contains("WildFly");
-        glassfish = serverInfo.contains("GlassFish")
-                || serverInfo.contains("Sun Java System Application Server");
-        weblogic = serverInfo.contains("WebLogic");
-        jonas = System.getProperty("jonas.name") != null;
+    JdbcWrapper(MetricsHandler handler) {
+        this.handler= handler;
     }
 
     static final class ConnectionInformationsComparator
@@ -258,9 +239,10 @@ class JdbcWrapper {
                 ACTIVE_CONNECTION_COUNT.decrementAndGet();
             }
         }
-        Map<String,Object> payload= new LinkedHashMap<String,Object>();
-        payload.put("exception",false);
+        Map<String,Object> props= new LinkedHashMap<String,Object>();
         final long beginTime = System.currentTimeMillis();
+        //设置开始时间
+        props.put("beginTime",beginTime);
         try {
             ACTIVE_CONNECTION_COUNT.incrementAndGet();
             return method.invoke(statement, args);
@@ -269,23 +251,29 @@ class JdbcWrapper {
                 final int errorCode = ((SQLException) e.getCause()).getErrorCode();
                 if (errorCode >= 20000 && errorCode < 30000) {
                     //记录执行sql的出错信息
-                    payload.put("exception",e.getCause().getMessage());
+                    Throwable ex= e.getCause();
+                    Map<String,String> xtags= new LinkedHashMap<String,String>();
+                    xtags.put("class",ex.getClass().getSimpleName());
+                    xtags.put("type", MetricsQuota.SQL.toString());
+                    Map<String,Object> xprops= new LinkedHashMap<String,Object>();
+                    xprops.put("message",ex.getMessage());
+                    xprops.put("timestamp",System.currentTimeMillis());
+                    handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
                 }
             }
             throw e;
         } finally {
             ACTIVE_CONNECTION_COUNT.decrementAndGet();
-
             long endTime= System.currentTimeMillis();
-            payload.put("atomId",TraceIdGenerator.next());
             //设置调用方法名称
-            payload.put("sql",requestName);
-            //记录请求开始时间
-            payload.put("timestamp",MetricsManager.toLocalDate(endTime));
+            props.put("sql",requestName);
+            //记录sql语句的长度大小
+            props.put("size",requestName.length());
+            props.put("timestamp",endTime);
             //记录执行的时间
-            payload.put("duration",endTime-beginTime);
+            props.put("duration",endTime-beginTime);
             //发送监控记录
-            MetricsManager.collect(MetricsType.SQL,payload);
+            handler.handle(MetricsQuota.SQL,null,props);
         }
     }
 
@@ -345,12 +333,12 @@ class JdbcWrapper {
         final ConnectionInvocationHandler invocationHandler = new ConnectionInvocationHandler(
                 connection);
         final Connection result;
-        if (jonas) {
-            result = createProxy(connection, invocationHandler,
-                    Arrays.asList(new Class<?>[] { Connection.class }));
-        } else {
+//        if (jonas) {
+//            result = createProxy(connection, invocationHandler,
+//                    Arrays.asList(new Class<?>[] { Connection.class }));
+//        } else {
             result = createProxy(connection, invocationHandler);
-        }
+       // }
         if (result != connection) { // NOPMD
             invocationHandler.init();
         }

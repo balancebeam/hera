@@ -1,6 +1,6 @@
-package io.anyway.hera.scheduler;
+package io.anyway.hera.collector;
 
-import io.anyway.hera.common.MetricsCollector;
+import io.anyway.hera.collector.MetricsCollector;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;

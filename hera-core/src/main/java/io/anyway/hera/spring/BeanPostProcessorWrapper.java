@@ -7,5 +7,7 @@ public interface BeanPostProcessorWrapper {
 
     boolean interest(Object bean);
 
-    Object wrapBean(Object bean, String beanName);
+    Object wrapBean(Object bean,String appId, String beanName);
+
+    void destroyWrapper(String appId,String beanName);
 }

@@ -1,4 +1,4 @@
-package io.anyway.hera.common;
+package io.anyway.hera.collector;
 
 /**
  * Created by yangzz on 16/8/23.

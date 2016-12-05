@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+	<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="locations">
+			<list>
+				<value>classpath:config.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 监控管理器 -->
+	<bean class="io.anyway.hera.analysis.KafkaMetricsConsumer">
+		<property name="servers" value="${hera.kafka.servers}"/>
+		<property name="group" value="${hera.kafka.consumer.group:default}"/>
+		<property name="clientId" value="${hera.kafka.client.id:default}"/>
+		<property name="timeout" value="${hera.kafka.consumer.timeout:5000}"/>
+		<property name="influxdbRepository" ref="influxdbRepository"/>
+	</bean>
+
+	<bean id="influxdbRepository" class="io.anyway.hera.analysis.influxdb.InfluxdbRepository">
+		<property name="server" value="${influxdb.server}"/>
+		<property name="database" value="${influxdb.database}"/>
+		<property name="username" value="${influxdb.username}"/>
+		<property name="password" value="${influxdb.password}"/>
+		<property name="retention" value="${influxdb.retention}"/>
+		<property name="blacklist">
+			<map>
+				<entry key="SQL">
+					<list>
+						<value>sql</value>
+					</list>
+				</entry>
+			</map>
+		</property>
+ 	</bean>
+
+
+</beans>

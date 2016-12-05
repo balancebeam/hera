@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
+import org.springframework.aop.framework.Advised;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -65,10 +66,11 @@ public class ServiceTypePointcut implements Pointcut {
         public boolean matches(Method method, Class targetClass) {
             for(Class<? extends Annotation> each: pointcutTypes){
                 try {
-                    if (targetClass.isAnnotationPresent(each)
+                    if (!Advised.class.isAssignableFrom(targetClass)
+                            && (targetClass.isAnnotationPresent(each)
                             || method.getDeclaringClass().isAnnotationPresent(each)
                             || method.isAnnotationPresent(each)
-                            || targetClass.getMethod(method.getName(), method.getParameterTypes()).isAnnotationPresent(each)) {
+                            || targetClass.getMethod(method.getName(), method.getParameterTypes()).isAnnotationPresent(each))) {
                         return true;
                     }
                 }catch (Exception e){
