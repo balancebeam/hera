@@ -89,7 +89,7 @@ public class MetricsFilter implements Filter {
             //如果存在异常记录异常信息
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("type", MetricsQuota.HTTP.toString());
+            xtags.put("quota", MetricsQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
             xprops.put("timestamp",System.currentTimeMillis());
@@ -114,6 +114,8 @@ public class MetricsFilter implements Filter {
             props.put("duration",endTime-beginTime);
             //发送监控记录
             handler.handle(MetricsQuota.HTTP,null,props);
+            //清空上下文
+            MetricsTraceContextHolder.clear();
         }
     }
 

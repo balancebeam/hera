@@ -3,10 +3,11 @@ package io.anyway.hera.jvm;
 import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.collector.MetricsCollector;
-import org.apache.commons.beanutils.BeanUtils;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -16,6 +17,10 @@ import java.util.Map;
 public class CpuCollector implements MetricsCollector {
 
     private MetricsHandler handler;
+
+    private boolean started= false;
+
+    private Method method;
 
     public void setHandler(MetricsHandler handler){
         this.handler= handler;
@@ -33,24 +38,34 @@ public class CpuCollector implements MetricsCollector {
         //操作系统版本号
         props.put("version",operatingSystem.getVersion());
         //cpu负载值
-        double loadedAverage= operatingSystem.getSystemLoadAverage();
-        props.put("systemLoadAverage",loadedAverage);
-        //windows获取的cpu负载值为-1
-        if(loadedAverage== -1.0 && isSunOsMBean(operatingSystem)){
-            try {
-                loadedAverage= Double.parseDouble(BeanUtils.getProperty(operatingSystem,"systemCpuLoad"));
-                props.put("systemLoadAverage", loadedAverage);
-            } catch (Exception e) {}
+        if(!started) {
+            method = ReflectionUtils.findMethod(operatingSystem.getClass(), "getProcessCpuLoad");
+            if(method!= null){
+                ReflectionUtils.makeAccessible(method);
+            }
+            started= true;
         }
+        if(method!= null){
+            double processCpuLoad= (Double) ReflectionUtils.invokeMethod(method,operatingSystem);
+            if(processCpuLoad==0){
+                processCpuLoad= 0.00000001;
+            }
+            props.put("processCpuLoad", processCpuLoad);
+        }
+        else{
+            double loadedAverage= operatingSystem.getSystemLoadAverage();
+            props.put("processCpuLoad", loadedAverage);
+        }
+        //记录采集时间
         props.put("timestamp",System.currentTimeMillis());
         //发送采集信息
         handler.handle(MetricsQuota.CPU,null,props);
     }
 
-    private boolean isSunOsMBean(OperatingSystemMXBean operatingSystem) {
-        String className = operatingSystem.getClass().getName();
-        return "com.sun.management.OperatingSystem".equals(className)
-                || "com.sun.management.UnixOperatingSystem".equals(className)
-                || "sun.management.OperatingSystemImpl".equals(className);
-    }
+//    private boolean isSunOsMBean(OperatingSystemMXBean operatingSystem) {
+//        String className = operatingSystem.getClass().getName();
+//        return "com.sun.management.OperatingSystem".equals(className)
+//                || "com.sun.management.UnixOperatingSystem".equals(className)
+//                || "sun.management.OperatingSystemImpl".equals(className);
+//    }
 }

@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by yangzz on 16/7/19.
@@ -49,8 +50,10 @@ public class RepositoryServiceImpl implements RepositoryService {
             }
             rs.close();
             statement.close();
+
+            Thread.sleep(new Random().nextInt(7000));
             //Thread.sleep(70000);
-            //connection.close();
+            connection.close();
         } catch (Exception e) {
             e.printStackTrace();
         }

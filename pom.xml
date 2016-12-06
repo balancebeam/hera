@@ -45,6 +45,8 @@
 		<jetty.version>8.1.0.RC5</jetty.version>
 		<javassist.version>3.20.0-GA</javassist.version>
 		<elastic-jobx.version>1.0.0</elastic-jobx.version>
+		<servlet.version>2.5</servlet.version>
+		<influxdb.version>2.4</influxdb.version>
 	</properties>
 
 	<dependencyManagement>
@@ -274,14 +276,14 @@
 				<optional>true</optional>
 			</dependency>
 			<dependency>
-				<groupId>commons-beanutils</groupId>
-				<artifactId>commons-beanutils</artifactId>
-				<version>1.9.2</version>
-			</dependency>
-			<dependency>
 				<groupId>javax.servlet</groupId>
 				<artifactId>servlet-api</artifactId>
 				<version>2.5</version>
+			</dependency>
+			<dependency>
+				<groupId>org.influxdb</groupId>
+				<artifactId>influxdb-java</artifactId>
+				<version>2.4</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

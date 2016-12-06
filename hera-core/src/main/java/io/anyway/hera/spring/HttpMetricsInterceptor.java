@@ -115,7 +115,7 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         if(ex!= null){
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("type", MetricsQuota.HTTP.toString());
+            xtags.put("quota", MetricsQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
             xprops.put("timestamp",System.currentTimeMillis());

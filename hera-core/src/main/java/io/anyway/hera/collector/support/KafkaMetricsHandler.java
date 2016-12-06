@@ -1,6 +1,9 @@
 package io.anyway.hera.collector.support;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson.serializer.ValueFilter;
 import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.context.MetricsTraceContext;
@@ -14,6 +17,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
+import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -57,6 +61,18 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
         this.group= group;
     }
 
+    private ValueFilter filter = new ValueFilter() {
+        @Override
+        public Object process(Object object, String name, Object value) {
+            if (value instanceof BigDecimal || value instanceof Double || value instanceof Float) {
+                return new BigDecimal(value.toString());
+            }
+            return value;
+        }
+    };
+
+    private SerializerFeature[] features=new SerializerFeature[0];
+
     @Override
     public void handle(final MetricsQuota type, final Map<String, String> tags, final Map<String, Object> props) {
 
@@ -86,7 +102,7 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
         jsonObject.put("tags",xtags);
         jsonObject.put("props",xprops);
         try {
-            Future<RecordMetadata> future=  producer.send(new ProducerRecord<String, String>("hera-metrics",jsonObject.toJSONString()));
+            Future<RecordMetadata> future=  producer.send(new ProducerRecord<String, String>("hera-metrics", JSON.toJSONString(jsonObject, filter, features)));
             RecordMetadata metadata= future.get(timeout, TimeUnit.SECONDS);
             if(logger.isDebugEnabled()){
                 logger.debug("Send message: {topic:"+metadata.topic()+",partition:"+metadata.partition()+",offset:"+metadata.offset()+"}");

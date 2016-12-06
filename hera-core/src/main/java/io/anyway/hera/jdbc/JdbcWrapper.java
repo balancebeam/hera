@@ -254,7 +254,7 @@ class JdbcWrapper {
                     Throwable ex= e.getCause();
                     Map<String,String> xtags= new LinkedHashMap<String,String>();
                     xtags.put("class",ex.getClass().getSimpleName());
-                    xtags.put("type", MetricsQuota.SQL.toString());
+                    xtags.put("quota", MetricsQuota.SQL.toString());
                     Map<String,Object> xprops= new LinkedHashMap<String,Object>();
                     xprops.put("message",ex.getMessage());
                     xprops.put("timestamp",System.currentTimeMillis());

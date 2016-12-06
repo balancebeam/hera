@@ -85,8 +85,8 @@ public class KafkaMetricsConsumer implements InitializingBean,DisposableBean {
                         for (TopicPartition partition : records.partitions()) {
                             List<ConsumerRecord<String, String>> partitionRecords = records.records(partition);
                             for (ConsumerRecord<String, String> each : partitionRecords) {
-                                if(logger.isInfoEnabled()){
-                                    logger.info("kafka receive message: "+"{topic:"+each.topic()+",partition:"+partition.partition()+",offset:"+each.offset()+",value:"+each.value()+"}");
+                                if(logger.isDebugEnabled()){
+                                    logger.debug("kafka receive message: "+"{topic:"+each.topic()+",partition:"+partition.partition()+",offset:"+each.offset()+",value:"+each.value()+"}");
                                 }
                                 Map<String,Object> jsonObject= ( Map<String,Object>)JSONObject.parseObject(each.value(),Map.class);
                                 if (logger.isDebugEnabled()) {
@@ -98,8 +98,8 @@ public class KafkaMetricsConsumer implements InitializingBean,DisposableBean {
                             long lastOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
                             Map<TopicPartition, OffsetAndMetadata> offsets = Collections.singletonMap(partition, new OffsetAndMetadata(lastOffset + 1));
                             consumer.commitSync(offsets);
-                            if (logger.isInfoEnabled()) {
-                                logger.info("application group: " + group + " has committed offset: " + offsets);
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("application group: " + group + " has committed offset: " + offsets);
                             }
                         }
                     } catch (Throwable e) {

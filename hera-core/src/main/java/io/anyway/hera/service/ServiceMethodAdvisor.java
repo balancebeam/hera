@@ -66,7 +66,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             //如果存在异常记录异常信息
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("type", MetricsQuota.SERVICE.toString());
+            xtags.put("quota", MetricsQuota.SERVICE.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
             xprops.put("timestamp",System.currentTimeMillis());
