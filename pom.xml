@@ -47,6 +47,8 @@
 		<elastic-jobx.version>1.0.0</elastic-jobx.version>
 		<servlet.version>2.5</servlet.version>
 		<influxdb.version>2.4</influxdb.version>
+		<beanutils.version>1.9.2</beanutils.version>
+		<stream.version>1.4.2</stream.version>
 	</properties>
 
 	<dependencyManagement>
@@ -272,18 +274,23 @@
 			<dependency>
 				<groupId>com.thoughtworks.xstream</groupId>
 				<artifactId>xstream</artifactId>
-				<version>1.4.2</version>
+				<version>${stream.version}</version>
 				<optional>true</optional>
 			</dependency>
 			<dependency>
 				<groupId>javax.servlet</groupId>
 				<artifactId>servlet-api</artifactId>
-				<version>2.5</version>
+				<version>${servlet.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.influxdb</groupId>
 				<artifactId>influxdb-java</artifactId>
-				<version>2.4</version>
+				<version>${influxdb.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-beanutils</groupId>
+				<artifactId>commons-beanutils</artifactId>
+				<version>${beanutils.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
