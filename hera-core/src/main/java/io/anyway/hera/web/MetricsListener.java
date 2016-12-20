@@ -99,7 +99,6 @@ public class MetricsListener implements HttpSessionListener, HttpSessionActivati
     private void doMonitor(){
         Map<String,Object> props= new LinkedHashMap<String, Object>();
         props.put("count",SESSION_COUNT.get());
-        props.put("timestamp",System.currentTimeMillis());
         ApplicationContext ctx= MetricsUtils.getWebApplicationContext(servletContext);
         if(ctx!= null) {
             MetricsHandler handler = ctx.getBean(MetricsHandler.class);

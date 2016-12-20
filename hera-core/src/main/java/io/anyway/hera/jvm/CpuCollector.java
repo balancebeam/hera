@@ -56,8 +56,6 @@ public class CpuCollector implements MetricsCollector {
             double loadedAverage= operatingSystem.getSystemLoadAverage();
             props.put("processCpuLoad", loadedAverage);
         }
-        //记录采集时间
-        props.put("timestamp",System.currentTimeMillis());
         //发送采集信息
         handler.handle(MetricsQuota.CPU,null,props);
     }

@@ -154,7 +154,6 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
 //                traceList.add(hash);
 //            }
 //            payload.put("leakTraceList",traceList.toString());
-            props.put("timestamp",System.currentTimeMillis());
             handler.handle(MetricsQuota.JDBC,tags,props);
         }
     }

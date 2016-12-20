@@ -97,13 +97,17 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
             //获取上一次GC的值
             Map<String,Long> lastVals= lastGCVals.get(each.getName());
             //垃圾回收的次数
-            props.put("collectionCount",each.getCollectionCount()-lastVals.get("collectionCount"));
+            long count= each.getCollectionCount()-lastVals.get("collectionCount");
+            if(count==0) {
+                continue;
+            }
+            props.put("collectionCount", count);
             //保存当前的值
-            lastVals.put("collectionCount",each.getCollectionCount());
+            lastVals.put("collectionCount", each.getCollectionCount());
             //垃圾回收持续的时间
-            props.put("collectionTime",each.getCollectionTime()-lastVals.get("collectionTime"));
+            props.put("collectionTime", each.getCollectionTime() - lastVals.get("collectionTime"));
             //保存当前的值
-            lastVals.put("collectionTime",each.getCollectionTime());
+            lastVals.put("collectionTime", each.getCollectionTime());
             //内存池名称
             props.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
             //发送采集信息

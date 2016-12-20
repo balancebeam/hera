@@ -92,7 +92,6 @@ public class MetricsFilter implements Filter {
             xtags.put("quota", MetricsQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            xprops.put("timestamp",System.currentTimeMillis());
             handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
 
             if(ex instanceof IOException){
@@ -109,7 +108,6 @@ public class MetricsFilter implements Filter {
             MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
             //记录结束时间
             long endTime= System.currentTimeMillis();
-            props.put("timestamp",endTime);
             //记录执行的时间
             props.put("duration",endTime-beginTime);
             //发送监控记录

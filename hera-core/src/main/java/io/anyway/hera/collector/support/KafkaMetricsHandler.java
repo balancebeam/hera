@@ -87,6 +87,8 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
             //设置用户请求的地址
             xprops.put("remote",ctx.getRemote());
         }
+        //记录采集时间
+        xprops.put("timestamp",System.currentTimeMillis());
         //构建维度
         Map<String,String> xtags= new LinkedHashMap<String, String>(this.tags);
         if(tags!= null){

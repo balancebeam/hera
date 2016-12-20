@@ -118,15 +118,12 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
             xtags.put("quota", MetricsQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            xprops.put("timestamp",System.currentTimeMillis());
             this.handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
         }
 
         MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
         //记录结束时间
         long endTime= System.currentTimeMillis();
-        //记录时间
-        props.put("timestamp",endTime);
         //记录执行的时间
         props.put("duration",endTime-(Long)props.get("beginTime"));
         //发送监控记录

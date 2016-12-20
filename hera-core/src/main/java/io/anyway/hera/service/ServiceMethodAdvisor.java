@@ -9,11 +9,13 @@ import io.anyway.hera.context.MetricsTraceContext;
 import io.anyway.hera.context.MetricsTraceContextHolder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -53,10 +55,19 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
         props.put("atomId",atomId);
         //获取监控上下文
         MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
-        //把当前的路径入栈
-        if (ctx!= null) {
-            ctx.getTraceStack().add(atomId);
+        //如果是本地调用
+        if (ctx== null) {
+            String traceId= TraceIdGenerator.next();
+            MDC.put("traceId",traceId);
+            //构造监控上下文
+            ctx= new MetricsTraceContext();
+            ctx.setTraceId(traceId);
+            ctx.setTraceStack(new Stack<String>());
+            ctx.setRemote("local");
+            MetricsTraceContextHolder.setMetricsTraceContext(ctx);
         }
+        //把当前的路径入栈
+        ctx.getTraceStack().add(atomId);
         //保存服务调用信息
         blockServiceBuffer.put(atomId,new BlockService(tags,props));
         //执行业务方法
@@ -69,20 +80,16 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             xtags.put("quota", MetricsQuota.SERVICE.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            xprops.put("timestamp",System.currentTimeMillis());
             handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
             throw ex;
         }
         finally {
             //把当前的路径出栈
-            if (ctx!= null) {
-                ctx.getTraceStack().pop();
-            }
+            ctx.getTraceStack().pop();
             //删除调用链信息
             blockServiceBuffer.remove(atomId);
             //记录结束时间
             long endTime= System.currentTimeMillis();
-            props.put("timestamp",endTime);
             //记录执行的时间
             props.put("duration",endTime - beginTime);
             //发送监控记录
@@ -101,7 +108,6 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             BlockService blockService= each.next();
             Map<String,Object> props= blockService.getProps();
             if(System.currentTimeMillis()- (Long)props.get("beginTime")>= pendingTime){
-                props.put("timestamp",System.currentTimeMillis());
                 handler.handle(MetricsQuota.BLOCKSERVICE,blockService.getTags(),props);
                 //从阻塞队列中删除
                 each.remove();

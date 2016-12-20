@@ -45,6 +45,10 @@
 	<bean id="memoryCollector" class="io.anyway.hera.jvm.MemoryCollector">
 		<property name="handler" ref="metricsHandler"/>
 	</bean>
+	<!-- Tomcat采集器 -->
+	<bean id="tomcatCollector" class="io.anyway.hera.tomcat.TomcatCollector">
+		<property name="handler" ref="metricsHandler"/>
+	</bean>
 
 	<!-- 定时采集器 -->
 	<bean class="io.anyway.hera.collector.MetricsCollectorTimer">
@@ -57,6 +61,7 @@
 				<ref bean="cpuCollector"/>
 				<ref bean="memoryCollector"/>
 				<ref bean="blockServiceCollector"/>
+				<ref bean="tomcatCollector"/>
 			</list>
 		</property>
 	</bean>

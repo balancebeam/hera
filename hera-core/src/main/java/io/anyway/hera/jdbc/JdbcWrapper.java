@@ -257,7 +257,6 @@ class JdbcWrapper {
                     xtags.put("quota", MetricsQuota.SQL.toString());
                     Map<String,Object> xprops= new LinkedHashMap<String,Object>();
                     xprops.put("message",ex.getMessage());
-                    xprops.put("timestamp",System.currentTimeMillis());
                     handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
                 }
             }
@@ -269,7 +268,6 @@ class JdbcWrapper {
             props.put("sql",requestName);
             //记录sql语句的长度大小
             props.put("size",requestName.length());
-            props.put("timestamp",endTime);
             //记录执行的时间
             props.put("duration",endTime-beginTime);
             //发送监控记录

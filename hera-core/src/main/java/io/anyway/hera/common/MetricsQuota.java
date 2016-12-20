@@ -11,9 +11,9 @@ public enum MetricsQuota {
     JDBC,
     SQL,
     WORKTHREAD,
-    SYSTHREAD,
     CPU,
     MEMORY,
     GC,
-    EXCEPTION
+    EXCEPTION,
+    TOMCAT
 }

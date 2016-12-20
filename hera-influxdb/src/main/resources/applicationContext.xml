@@ -31,9 +31,35 @@
 		<property name="retention" value="${influxdb.retention}"/>
 		<property name="blacklist">
 			<map>
+				<entry key="HTTP">
+					<list>
+						<value>trace</value>
+						<value>remote</value>
+						<value>atomId</value>
+						<value>beginTime</value>
+					</list>
+				</entry>
+				<entry key="SERVICE">
+					<list>
+						<value>trace</value>
+						<value>remote</value>
+						<value>atomId</value>
+						<value>beginTime</value>
+					</list>
+				</entry>
 				<entry key="SQL">
 					<list>
+						<value>trace</value>
+						<value>remote</value>
 						<value>sql</value>
+						<value>beginTime</value>
+					</list>
+				</entry>
+				<entry key="EXCEPTION">
+					<list>
+						<value>trace</value>
+						<value>remote</value>
+						<value>message</value>
 					</list>
 				</entry>
 			</map>

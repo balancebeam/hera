@@ -10,8 +10,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -81,14 +79,15 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
             props.put("queueCapacity",queueCapacity);
             //任务数包括队列和正在执行的任务
             props.put("taskCount",executor.getThreadPoolExecutor().getTaskCount()-executor.getThreadPoolExecutor().getCompletedTaskCount());
-            props.put("timestamp",System.currentTimeMillis());
             //发送监控数据
             handler.handle(MetricsQuota.WORKTHREAD,tags,props);
         }
+        /**
         //系统线程池收集
         ThreadMXBean instance = ManagementFactory.getThreadMXBean();
         Map<String,Object> props= new LinkedHashMap<String, Object>();
         //线程总数
+
         props.put("threadCount",instance.getThreadCount());
         //峰值活动线程数
         props.put("peakThreadCount",instance.getPeakThreadCount());
@@ -98,8 +97,8 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
         props.put("currentThreadCpuTime",instance.getCurrentThreadCpuTime());
         //当前线程用户模式中的cpu执行时间
         props.put("currentThreadUserTime",instance.getCurrentThreadUserTime());
-        props.put("timestamp",System.currentTimeMillis());
         //发送监控数据
         handler.handle(MetricsQuota.SYSTHREAD,null,props);
+         */
     }
 }
