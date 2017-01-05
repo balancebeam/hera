@@ -21,6 +21,8 @@ public class MetricsBeanPostProcessor implements BeanPostProcessor, PriorityOrde
 
     private String appId;
 
+    private List<BeanPreProcessorWrapper> beanPreProcessorWrappers = Collections.emptyList();
+
     private List<BeanPostProcessorWrapper> beanPostProcessorWrappers = Collections.emptyList();
 
     public void setAppId(String appId){
@@ -29,6 +31,11 @@ public class MetricsBeanPostProcessor implements BeanPostProcessor, PriorityOrde
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        for(BeanPreProcessorWrapper each: beanPreProcessorWrappers){
+            if(each.interest(bean)){
+                return each.preWrapBean(bean,appId,beanName);
+            }
+        }
         return bean;
     }
 
@@ -50,6 +57,10 @@ public class MetricsBeanPostProcessor implements BeanPostProcessor, PriorityOrde
 
     public void setBeanPostProcessorWrappers(List<BeanPostProcessorWrapper> beanPostProcessorWrappers){
         this.beanPostProcessorWrappers = beanPostProcessorWrappers;
+    }
+
+    public void setBeanPreProcessorWrappers(List<BeanPreProcessorWrapper> beanPreProcessorWrappers){
+        this.beanPreProcessorWrappers = beanPreProcessorWrappers;
     }
 
     @Override

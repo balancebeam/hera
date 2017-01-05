@@ -50,6 +50,18 @@
 		<property name="handler" ref="metricsHandler"/>
 	</bean>
 
+	<bean id="httpClientCollector" class="io.anyway.hera.httpclient.HttpClientPoolCollector">
+		<property name="handler" ref="metricsHandler"/>
+	</bean>
+
+	<bean id="mybatisPluginProcessor" class="io.anyway.hera.mybatis.MybatisPluginProcessor">
+		<property name="interceptor">
+			<bean class="io.anyway.hera.mybatis.MybatisMetricsInterceptor">
+				<property name="handler" ref="metricsHandler"/>
+			</bean>
+		</property>
+	</bean>
+
 	<!-- 定时采集器 -->
 	<bean class="io.anyway.hera.collector.MetricsCollectorTimer">
 		<property name="delay" value="${hera.timer.delay:60000}"/>
@@ -68,10 +80,16 @@
 
 	<!-- 自动代理某对象,如数据源和线程池 -->
 	<bean class="io.anyway.hera.spring.MetricsBeanPostProcessor">
+		<property name="beanPreProcessorWrappers">
+			<list>
+				<ref bean="mybatisPluginProcessor"/>
+			</list>
+		</property>
 		<property name="beanPostProcessorWrappers">
 			<list>
-				<ref bean="dataSourceCollector"></ref>
-				<ref bean="threadPoolCollector"></ref>
+				<ref bean="dataSourceCollector"/>
+				<ref bean="threadPoolCollector"/>
+				<ref bean="httpClientCollector"/>
 			</list>
 		</property>
 	</bean>

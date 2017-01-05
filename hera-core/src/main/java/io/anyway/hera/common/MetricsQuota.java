@@ -15,5 +15,6 @@ public enum MetricsQuota {
     MEMORY,
     GC,
     EXCEPTION,
-    TOMCAT
+    TOMCAT,
+    HTTPCLIENT
 }

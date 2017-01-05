@@ -51,6 +51,7 @@
 
     <import resource="appcontext-service-db.xml" />
     <import resource="appcontext-service-dao.xml" />
+    <import resource="appcontext-httpclient.xml"/>
     <import resource="classpath:hera-metrics.xml"/>
     
     <context:component-scan base-package="io.anyway.hera.demo"/>

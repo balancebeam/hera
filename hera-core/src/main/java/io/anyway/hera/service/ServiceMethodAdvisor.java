@@ -11,13 +11,14 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
+import org.springframework.util.StringUtils;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Stack;
+import javax.servlet.ServletException;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -31,12 +32,23 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
 
     private MetricsHandler handler;
 
+    private List<Pattern> regExes= Collections.emptyList();
+
     public void setHandler(MetricsHandler handler){
         this.handler= handler;
     }
 
     public void setPendingTime(long pendingTime){
         this.pendingTime= pendingTime;
+    }
+
+    public void setPatterns(String patterns) throws ServletException {
+        if(!StringUtils.isEmpty(patterns)){
+            regExes= new LinkedList<Pattern>();
+            for(String each: patterns.split(",")){
+                regExes.add(Pattern.compile(each));
+            }
+        }
     }
 
     @Override
@@ -47,6 +59,15 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
         //设置调用方法名称
         String methodName= invocation.getThis().getClass().getSimpleName()+"."+invocation.getMethod().getName();
         tags.put("service",methodName);
+        if(!regExes.isEmpty()){
+            for(Pattern each: regExes){
+                Matcher matcher= each.matcher(methodName);
+                if(matcher.find()){
+                    tags.put("pattern",each.pattern());
+                    break;
+                }
+            }
+        }
         //记录请求开始时间
         props.put("beginTime",beginTime);
         //自动生成方法标识

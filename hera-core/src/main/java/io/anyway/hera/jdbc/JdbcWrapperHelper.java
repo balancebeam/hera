@@ -8,11 +8,25 @@ import java.util.*;
 
 final public class JdbcWrapperHelper {
 
+	private static final ThreadLocal<Map<String,Object>> holder= new ThreadLocal<Map<String, Object>>();
+
 	private static final Map<Class<?>, Constructor<?>> PROXY_CACHE = Collections
 			.synchronizedMap(new WeakHashMap<Class<?>, Constructor<?>>());
 
 	private JdbcWrapperHelper() {
 		super();
+	}
+
+	public static void setMetricsProps(Map<String,Object> props){
+		if(props== null){
+			holder.remove();
+			return;
+		}
+		holder.set(props);
+	}
+
+	static Map<String,Object> getMetricsProps(){
+		return holder.get();
 	}
 
 

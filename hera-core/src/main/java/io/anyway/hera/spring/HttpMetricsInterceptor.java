@@ -12,13 +12,14 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by yangzz on 16/11/20.
@@ -29,8 +30,19 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
 
     private MetricsHandler handler;
 
+    private List<Pattern> regExes= Collections.emptyList();
+
     public void setHandler(MetricsHandler handler){
         this.handler= handler;
+    }
+
+    public void setPatterns(String patterns) throws ServletException {
+        if(!StringUtils.isEmpty(patterns)){
+            regExes= new LinkedList<Pattern>();
+            for(String each: patterns.split(",")){
+                regExes.add(Pattern.compile(each));
+            }
+        }
     }
 
     @Override
@@ -78,6 +90,7 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         long beginTime= System.currentTimeMillis();
 
         Map<String,Object> props= new LinkedHashMap<String,Object>();
+
         //设置该请求的唯一ID
         props.put("atomId",atomId);
         //设置请求的http URL
@@ -124,10 +137,23 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
         //记录结束时间
         long endTime= System.currentTimeMillis();
+        Map<String,String> tags= null;
         //记录执行的时间
         props.put("duration",endTime-(Long)props.get("beginTime"));
+
+        if(!regExes.isEmpty()){
+            String url= (String)props.get("url");
+            for(Pattern each: regExes){
+                Matcher matcher= each.matcher(url);
+                if(matcher.find()){
+                    tags= new LinkedHashMap<String, String>();
+                    tags.put("pattern",each.pattern());
+                    break;
+                }
+            }
+        }
         //发送监控记录
-        this.handler.handle(MetricsQuota.HTTP,null,props);
+        this.handler.handle(MetricsQuota.HTTP,tags,props);
         //清空上下文变量
         MetricsTraceContextHolder.clear();
         holder.remove();

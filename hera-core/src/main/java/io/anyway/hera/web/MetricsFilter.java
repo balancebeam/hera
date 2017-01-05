@@ -16,6 +16,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by yangzz on 16/8/16.
@@ -24,9 +26,18 @@ public class MetricsFilter implements Filter {
 
     private ServletContext servletContext;
 
+    private List<Pattern> regExes= Collections.emptyList();
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         servletContext= filterConfig.getServletContext();
+        String patterns= filterConfig.getInitParameter("patterns");
+        if(!StringUtils.isEmpty(patterns)){
+            regExes= new LinkedList<Pattern>();
+            for(String each: patterns.split(",")){
+                regExes.add(Pattern.compile(each));
+            }
+        }
     }
 
     @Override
@@ -73,10 +84,23 @@ public class MetricsFilter implements Filter {
         long beginTime= System.currentTimeMillis();
 
         Map<String,Object> props= new LinkedHashMap<String,Object>();
+        Map<String,String> tags= null;
         //设置该请求的唯一ID
         props.put("atomId",atomId);
         //设置请求的http URL
-        props.put("url",request.getRequestURI());
+        String url= request.getRequestURI();
+        props.put("url",url);
+        //添加匹配路径
+        if(!regExes.isEmpty()){
+            for(Pattern each: regExes){
+                Matcher matcher= each.matcher(url);
+                if(matcher.find()){
+                    tags= new LinkedHashMap<String, String>();
+                    tags.put("pattern",each.pattern());
+                    break;
+                }
+            }
+        }
         //记录请求开始时间
         props.put("beginTime", beginTime);
         //把当前的路径入栈
@@ -111,7 +135,7 @@ public class MetricsFilter implements Filter {
             //记录执行的时间
             props.put("duration",endTime-beginTime);
             //发送监控记录
-            handler.handle(MetricsQuota.HTTP,null,props);
+            handler.handle(MetricsQuota.HTTP,tags,props);
             //清空上下文
             MetricsTraceContextHolder.clear();
         }

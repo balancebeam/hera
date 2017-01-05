@@ -36,12 +36,12 @@ public class MetricsCollectorTimer extends TimerTask implements ApplicationListe
 
     @Override
     public void run(){
-        try {
-            for (MetricsCollector each : collectors) {
+        for (MetricsCollector each : collectors) {
+            try {
                 each.doCollect();
+            }catch(Throwable e){
+                //continue;
             }
-        }catch(Throwable e){
-            //continue;
         }
     }
 

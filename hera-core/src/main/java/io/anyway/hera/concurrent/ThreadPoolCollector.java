@@ -82,23 +82,6 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
             //发送监控数据
             handler.handle(MetricsQuota.WORKTHREAD,tags,props);
         }
-        /**
-        //系统线程池收集
-        ThreadMXBean instance = ManagementFactory.getThreadMXBean();
-        Map<String,Object> props= new LinkedHashMap<String, Object>();
-        //线程总数
 
-        props.put("threadCount",instance.getThreadCount());
-        //峰值活动线程数
-        props.put("peakThreadCount",instance.getPeakThreadCount());
-        //守护线程总数
-        props.put("daemonThreadCount",instance.getDaemonThreadCount());
-        //当前线程cpu执行时间
-        props.put("currentThreadCpuTime",instance.getCurrentThreadCpuTime());
-        //当前线程用户模式中的cpu执行时间
-        props.put("currentThreadUserTime",instance.getCurrentThreadUserTime());
-        //发送监控数据
-        handler.handle(MetricsQuota.SYSTHREAD,null,props);
-         */
     }
 }

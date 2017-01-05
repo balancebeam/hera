@@ -4,7 +4,10 @@ import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.collector.MetricsCollector;
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.StringUtils;
 
 import java.lang.management.*;
 import java.math.BigDecimal;
@@ -18,6 +21,8 @@ import java.util.Map;
 public class MemoryCollector implements MetricsCollector,InitializingBean {
 
     private long m_unit= 1024*1024;
+
+    private Log logger= LogFactory.getLog(MemoryCollector.class);
 
     private MetricsHandler handler;
 
@@ -90,12 +95,17 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
 
         //采集内存垃圾回收信息
         for(GarbageCollectorMXBean each: ManagementFactory.getGarbageCollectorMXBeans()){
+            //内存区名称 PS MarkSweep ==> Full GC && PS Scavenge ==> Young GC
+            String name= !StringUtils.isEmpty(each.getName())? each.getName(): Arrays.asList(each.getMemoryPoolNames()).toString();
+            Map<String,Long> lastVals= lastGCVals.get(name);
+            if(lastVals== null){
+                continue;
+            }
             props= new LinkedHashMap<String,Object>();
             Map<String,String> tags= new LinkedHashMap<String, String>();
-            //内存区名称 PS MarkSweep ==> Full GC && PS Scavenge ==> Young GC
-            tags.put("name",each.getName());
+            tags.put("name",name);
             //获取上一次GC的值
-            Map<String,Long> lastVals= lastGCVals.get(each.getName());
+
             //垃圾回收的次数
             long count= each.getCollectionCount()-lastVals.get("collectionCount");
             if(count==0) {
@@ -110,8 +120,6 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
             lastVals.put("collectionTime", each.getCollectionTime());
             //内存池名称
             props.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
-            //发送采集信息
-            props.put("timestamp",System.currentTimeMillis());
             //发送GC监控信息
             handler.handle(MetricsQuota.GC,tags,props);
         }
@@ -151,7 +159,12 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
             //垃圾回收持续的时间
             props.put("collectionTime",each.getCollectionTime());
             //保存GC的初始值
-            lastGCVals.put(each.getName(),props);
+            String name= each.getName();
+            if(StringUtils.isEmpty(name)){
+                name= Arrays.asList(each.getMemoryPoolNames()).toString();
+                logger.warn("GarbageCollectorMXBean.getName() is empty,will use getMemoryPoolNames() :"+name);
+            }
+            lastGCVals.put(name,props);
         }
     }
 }

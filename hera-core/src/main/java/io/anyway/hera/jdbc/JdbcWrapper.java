@@ -239,7 +239,10 @@ class JdbcWrapper {
                 ACTIVE_CONNECTION_COUNT.decrementAndGet();
             }
         }
-        Map<String,Object> props= new LinkedHashMap<String,Object>();
+        Map<String,Object> props= JdbcWrapperHelper.getMetricsProps();
+        if(props== null) {
+            props= new LinkedHashMap<String, Object>();
+        }
         final long beginTime = System.currentTimeMillis();
         //设置开始时间
         props.put("beginTime",beginTime);
@@ -267,11 +270,13 @@ class JdbcWrapper {
             //设置调用方法名称
             props.put("sql",requestName);
             //记录sql语句的长度大小
-            props.put("size",requestName.length());
+            props.put("sql-size",requestName.length());
             //记录执行的时间
-            props.put("duration",endTime-beginTime);
+            props.put("sql-duration",endTime-beginTime);
             //发送监控记录
-            handler.handle(MetricsQuota.SQL,null,props);
+            if( JdbcWrapperHelper.getMetricsProps()== null) {
+                handler.handle(MetricsQuota.SQL, null, props);
+            }
         }
     }
 
