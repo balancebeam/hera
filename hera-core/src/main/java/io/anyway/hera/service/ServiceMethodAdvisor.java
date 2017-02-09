@@ -89,6 +89,8 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
         }
         //把当前的路径入栈
         ctx.getTraceStack().add(atomId);
+        //方便BLOCKSERVICE获取
+        props.put("traceId",ctx.getTraceId());
         //保存服务调用信息
         blockServiceBuffer.put(atomId,new BlockService(tags,props));
         //执行业务方法

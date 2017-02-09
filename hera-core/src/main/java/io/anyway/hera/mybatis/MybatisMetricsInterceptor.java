@@ -68,7 +68,7 @@ public class MybatisMetricsInterceptor implements Interceptor {
             int size= result instanceof Collection? ((Collection<?>)result).size(): 1;
             props.put("result-size",size);
             long duration= System.currentTimeMillis()- beginTime;
-            props.put("result-duration", duration);
+            props.put("mapper-duration", duration);
             return result;
         }finally{
             JdbcWrapperHelper.setMetricsProps(null);
