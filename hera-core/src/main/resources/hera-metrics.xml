@@ -14,7 +14,8 @@
 	</bean>
 	-->
 	<bean id="metricsHandler" class="io.anyway.hera.collector.support.KafkaMetricsHandler">
-		<property name="group" value="${hera.group:default}"/>
+		<property name="appId" value="${hera.appId}"/>
+		<property name="database" value="${hera.influxdb.database}"/>
 		<property name="clientId" value="${hera.kafka.client.id:default}"/>
 		<property name="servers" value="${hera.kafka.servers}"/>
 		<property name="timeout" value="${hera.kafka.producer.timeout:30}"/>
@@ -23,7 +24,7 @@
 	<!-- 连接池采集器 -->
 	<bean id="dataSourceCollector" class="io.anyway.hera.jdbc.DataSourceCollector">
 		<property name="handler" ref="metricsHandler"/>
-		<property name="leakInterestTracePackages">
+		<property name="holdInterestTracePackages">
 			<value>${hera.jdbc.tracePackages:}</value>
 		</property>
 		<property name="excludedDatasources">
@@ -96,7 +97,7 @@
 
 	<bean id="blockServiceCollector" class="io.anyway.hera.service.ServiceMethodAdvisor">
 		<property name="handler" ref="metricsHandler"/>
-		<property name="pendingTime" value="${hera.service.pendingTime:300000}"/>
+		<property name="pendingTime" value="${hera.service.pendingTime:120000}"/>
 	</bean>
 	<!-- 服务方法拦截器 -->
 	<bean class="org.springframework.aop.support.DefaultPointcutAdvisor">

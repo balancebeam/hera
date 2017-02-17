@@ -16,6 +16,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.net.InetAddress;
@@ -39,7 +40,9 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
 
     private String clientId;
 
-    private String group;
+    private String appId;
+
+    private String database;
 
     private Map<String,String> tags = new LinkedHashMap<String, String>();
 
@@ -53,12 +56,19 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
         this.timeout = timeout;
     }
 
+    public void setDatabase(String database) {
+        if(database== null || "".equals(database.trim())){
+            throw new IllegalArgumentException("database must be not empty.");
+        }
+        this.database = database;
+    }
+
     public void setServers(String servers) {
         this.servers = servers;
     }
 
-    public void setGroup(String group) {
-        this.group= group;
+    public void setAppId(String appId) {
+        this.appId= appId;
     }
 
     private ValueFilter filter = new ValueFilter() {
@@ -100,6 +110,7 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
         }
 
         JSONObject jsonObject= new JSONObject();
+        jsonObject.put("database",database);
         jsonObject.put("quota",type.toString());
         jsonObject.put("tags",xtags);
         jsonObject.put("props",xprops);
@@ -117,7 +128,7 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
     @Override
     public void afterPropertiesSet() throws Exception {
 
-        tags.put("group",group);
+        tags.put("appId",appId);
         tags.put("host",InetAddress.getLocalHost().getHostAddress());
         tags = Collections.unmodifiableMap(tags);
         if(logger.isInfoEnabled()) {

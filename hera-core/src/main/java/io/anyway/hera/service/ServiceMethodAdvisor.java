@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  */
 public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,Ordered {
 
-    private long pendingTime= 5*60*1000; //默认5分钟
+    private long pendingTime= 2*60*1000; //默认2分钟
 
     final private ConcurrentMap<String,BlockService> blockServiceBuffer = new ConcurrentHashMap<String,BlockService>(2048);
 

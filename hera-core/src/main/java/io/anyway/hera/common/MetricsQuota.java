@@ -9,6 +9,7 @@ public enum MetricsQuota {
     SERVICE,
     BLOCKSERVICE,
     JDBC,
+    HOLDCONNECTION,
     SQL,
     WORKTHREAD,
     CPU,

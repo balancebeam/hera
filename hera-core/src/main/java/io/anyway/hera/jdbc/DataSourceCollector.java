@@ -32,15 +32,17 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
     }
 
     /**
-     * Connection泄露的跟踪有效包路径
-     * @param leakInterestTracePackages
+     * Connection阻塞的跟踪有效包路径
+     * @param holdInterestTracePackages
      */
-    public void setLeakInterestTracePackages(String leakInterestTracePackages){
-        if(!StringUtils.isEmpty(leakInterestTracePackages)){
-            List<String> leakPackages= Arrays.asList(leakInterestTracePackages.split(","));
-            LeakConnectionInformations.LEAK_INTEREST_TRACE_PACKAGES = leakPackages;
-            logger.info("LEAK_INTEREST_TRACE_PACKAGES: "+leakPackages);
+    public void setHoldInterestTracePackages(String holdInterestTracePackages){
+        if(holdInterestTracePackages==null ||
+                "".equals(holdInterestTracePackages=holdInterestTracePackages.trim())) {
+            throw new IllegalArgumentException("HOLD_INTEREST_TRACE_PACKAGES should be not empty.");
         }
+        List<String> holdPackages= Arrays.asList(holdInterestTracePackages.split(","));
+        HoldConnectionInformations.HOLD_INTEREST_TRACE_PACKAGES = holdPackages;
+        logger.info("HOLD_INTEREST_TRACE_PACKAGES: "+holdPackages);
     }
 
     /**
@@ -145,16 +147,35 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
             props.put("minIdle",jdbcWrapper.getMinIdle());
             props.put("activeCount",jdbcWrapper.getActiveConnectionCount());
             props.put("usedCount",jdbcWrapper.getUsedConnectionCount());
-            props.put("leakCount",jdbcWrapper.getHoldedConnectionCount());
-//            List<Map<String,Object>> traceList= new LinkedList<Map<String, Object>>();
-//            for (LeakConnectionInformations info: jdbcWrapper.getHoldedConnectionInformationsList()){
-//                Map<String,Object> hash= new LinkedHashMap<String, Object>();
-//                hash.put("openingTime",info.getOpeningTime());
-//                hash.put("stackTrace",info.getOpeningStackTrace().toString());
-//                traceList.add(hash);
-//            }
-//            payload.put("leakTraceList",traceList.toString());
+            props.put("holdCount",jdbcWrapper.getHoldedConnectionCount());
+
             handler.handle(MetricsQuota.JDBC,tags,props);
+
+            //连接阻塞发出阻塞的服务列表和调用次数
+            if(jdbcWrapper.getHoldedConnectionCount()==jdbcWrapper.getMaxActive()){
+                Map<String,Integer> holdServices= new HashMap<String, Integer>();
+                //汇总阻塞方法
+                for(HoldConnectionInformations info: jdbcWrapper.getHoldedConnectionInformationsList()){
+                    String service= info.getMatchingHoldService();
+                    if (service== null){
+                        continue;
+                    }
+                    if(holdServices.containsKey(service)){
+                        holdServices.put(service,holdServices.get(service)+1);
+                    }
+                    else{
+                        holdServices.put(service,1);
+                    }
+                }
+                for(Map.Entry<String,Integer> entry: holdServices.entrySet()){
+                    Map<String,String> btags= new LinkedHashMap<String,String>();
+                    Map<String,Object> bprops= new LinkedHashMap<String, Object>();
+                    btags.put("dataSourceName",each.getKey());
+                    btags.put("service",entry.getKey());
+                    bprops.put("count",entry.getValue());
+                    handler.handle(MetricsQuota.HOLDCONNECTION,btags,bprops);
+                }
+            }
         }
     }
 

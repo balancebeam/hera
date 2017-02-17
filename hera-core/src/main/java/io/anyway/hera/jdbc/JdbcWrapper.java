@@ -50,7 +50,7 @@ class JdbcWrapper {
     private final AtomicInteger ACTIVE_CONNECTION_COUNT = new AtomicInteger();
     private final AtomicInteger HOLDED_CONNECTION_COUNT = new AtomicInteger();
     private final AtomicLong USED_CONNECTION_COUNT = new AtomicLong();
-    private final Map<Integer, LeakConnectionInformations> HOLD_CONNECTION_INFORMATIONS = new ConcurrentHashMap<Integer, LeakConnectionInformations>();
+    private final Map<Integer, HoldConnectionInformations> HOLD_CONNECTION_INFORMATIONS = new ConcurrentHashMap<Integer, HoldConnectionInformations>();
 
     private static final int MAX_USED_CONNECTION_INFORMATIONS = 500;
 
@@ -59,11 +59,11 @@ class JdbcWrapper {
     }
 
     static final class ConnectionInformationsComparator
-            implements Comparator<LeakConnectionInformations>, Serializable {
+            implements Comparator<HoldConnectionInformations>, Serializable {
         private static final long serialVersionUID = 1L;
 
         @Override
-        public int compare(LeakConnectionInformations connection1, LeakConnectionInformations connection2) {
+        public int compare(HoldConnectionInformations connection1, HoldConnectionInformations connection2) {
             return new Date(connection1.getOpeningTime()).compareTo(new Date(connection2.getOpeningTime()));
         }
     }
@@ -128,8 +128,8 @@ class JdbcWrapper {
             if (isConnectionInformationsEnabled()
                     && HOLD_CONNECTION_INFORMATIONS.size() < MAX_USED_CONNECTION_INFORMATIONS) {
                 HOLD_CONNECTION_INFORMATIONS.put(
-                        LeakConnectionInformations.getUniqueIdOfConnection(connection),
-                        new LeakConnectionInformations());
+                        HoldConnectionInformations.getUniqueIdOfConnection(connection),
+                        new HoldConnectionInformations());
             }
             HOLDED_CONNECTION_COUNT.incrementAndGet();
             USED_CONNECTION_COUNT.incrementAndGet();
@@ -159,7 +159,7 @@ class JdbcWrapper {
                 if ("close".equals(methodName) && !alreadyClosed) {
                     HOLDED_CONNECTION_COUNT.decrementAndGet();
                     HOLD_CONNECTION_INFORMATIONS
-                            .remove(LeakConnectionInformations.getUniqueIdOfConnection(connection));
+                            .remove(HoldConnectionInformations.getUniqueIdOfConnection(connection));
                     alreadyClosed = true;
                 }
             }
@@ -424,8 +424,8 @@ class JdbcWrapper {
         return DATASOURCE_CONFIG_PROPERTIES;
     }
 
-    List<LeakConnectionInformations> getHoldedConnectionInformationsList() {
-        final List<LeakConnectionInformations> result = new ArrayList<LeakConnectionInformations>(
+    List<HoldConnectionInformations> getHoldedConnectionInformationsList() {
+        final List<HoldConnectionInformations> result = new ArrayList<HoldConnectionInformations>(
                 HOLD_CONNECTION_INFORMATIONS.values());
         Collections.sort(result, new ConnectionInformationsComparator());
         return Collections.unmodifiableList(result);

@@ -24,8 +24,6 @@ public class InfluxdbRepository implements InitializingBean,DisposableBean{
 
     private String password;
 
-    private String database;
-
     private String retention;
 
     private InfluxDB influxDB;
@@ -38,10 +36,6 @@ public class InfluxdbRepository implements InitializingBean,DisposableBean{
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public void setDatabase(String database) {
-        this.database = database;
     }
 
     public void setRetention(String retention) {
@@ -57,6 +51,8 @@ public class InfluxdbRepository implements InitializingBean,DisposableBean{
     }
 
     public void send(Map<String,Object> jsonObject){
+        String database= (String)jsonObject.get("database");
+
         String quota= (String)jsonObject.get("quota");
         Point.Builder builder = Point.measurement(quota);
 

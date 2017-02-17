@@ -25,7 +25,6 @@
 
 	<bean id="influxdbRepository" class="io.anyway.hera.analysis.influxdb.InfluxdbRepository">
 		<property name="server" value="${influxdb.server}"/>
-		<property name="database" value="${influxdb.database}"/>
 		<property name="username" value="${influxdb.username}"/>
 		<property name="password" value="${influxdb.password}"/>
 		<property name="retention" value="${influxdb.retention}"/>
