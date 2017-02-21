@@ -3,15 +3,27 @@ package io.anyway.hera.httpclient;
 import io.anyway.hera.collector.MetricsCollector;
 import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.common.BlockingStackTraceCollector;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpClientConnection;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
+import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.pool.ConnPoolControl;
+import org.apache.http.pool.PoolStats;
+import org.springframework.cglib.proxy.InvocationHandler;
+import org.springframework.cglib.proxy.Proxy;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by yangzz on 17/1/4.
@@ -22,10 +34,16 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
 
     private MetricsHandler handler;
 
+    private BlockingStackTraceCollector blockingStackTraceCollector;
+
     private final Map<String,ConnPoolControl<HttpRoute>> pool= new LinkedHashMap<String,ConnPoolControl<HttpRoute>>();
 
     public void setHandler(MetricsHandler handler){
         this.handler= handler;
+    }
+
+    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
+        this.blockingStackTraceCollector = blockingStackTraceCollector;
     }
 
     @Override
@@ -34,10 +52,47 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
     }
 
     @Override
-    public Object wrapBean(Object bean, String appId, String beanName) {
-        pool.put((!StringUtils.isEmpty(appId)?appId+":":"")+beanName,(ConnPoolControl<HttpRoute>)bean);
+    public Object wrapBean(final Object bean, String appId, final String beanName) {
+        Class<?> clazz= bean.getClass();
+        Class<?>[] interfaces= new Class<?>[clazz.getInterfaces().length+1];
+        interfaces[0]= HttpClientStackTraceRepository.class;
+        System.arraycopy(clazz.getInterfaces(),0,interfaces,1,clazz.getInterfaces().length);
+
+        Object result= Proxy.newProxyInstance(clazz.getClassLoader(), interfaces, new InvocationHandler() {
+            ConcurrentHashMap<HttpClientConnection,StackTraceElement[]> traceRepository= new ConcurrentHashMap<HttpClientConnection,StackTraceElement[]>();
+            @Override
+            public Object invoke(Object o, Method method, Object[] args) throws Throwable {
+                String methodName= method.getName();
+                if("requestConnection".equals(methodName)){
+                    final ConnectionRequest delegate= (ConnectionRequest)method.invoke(bean,args);
+                    return new ConnectionRequest(){
+
+                        @Override
+                        public boolean cancel() {
+                            return delegate.cancel();
+                        }
+
+                        @Override
+                        public HttpClientConnection get(long l, TimeUnit timeUnit)
+                                throws InterruptedException, ExecutionException, ConnectionPoolTimeoutException {
+                            HttpClientConnection connection= delegate.get(l,timeUnit);
+                            traceRepository.put(connection,Thread.currentThread().getStackTrace());
+                            return connection;
+                        }
+                    };
+                }
+                else if("releaseConnection".equals(methodName)){
+                    traceRepository.remove(args[0]);
+                }
+                else if("getBlockingStackTrace".equals(methodName)){
+                    return traceRepository.values();
+                }
+                return method.invoke(bean,args);
+            }
+        });
+        pool.put((!StringUtils.isEmpty(appId)?appId+":":"")+beanName,(ConnPoolControl<HttpRoute>)result);
         logger.info("metrics HttpClient pool:" +beanName);
-        return bean;
+        return result;
     }
 
     @Override
@@ -53,11 +108,18 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
             Map<String,Object> props= new LinkedHashMap<String,Object>();
             tags.put("name",each.getKey());
             ConnPoolControl<HttpRoute> connPoolControl= each.getValue();
-            props.put("available",connPoolControl.getTotalStats().getAvailable());
-            props.put("leased",connPoolControl.getTotalStats().getLeased());
-            props.put("max",connPoolControl.getTotalStats().getMax());
-            props.put("pending",connPoolControl.getTotalStats().getPending());
+            PoolStats stats= connPoolControl.getTotalStats();
+            props.put("available",stats.getAvailable());
+            props.put("leased",stats.getLeased());
+            props.put("max",stats.getMax());
+            props.put("pending",stats.getPending());
             handler.handle(MetricsQuota.HTTPCLIENT,tags,props);
+
+            //资源已满打印堆栈
+            if(stats.getMax()==stats.getLeased()){
+                Collection<StackTraceElement[]> stackTraces= ((HttpClientStackTraceRepository)connPoolControl).getBlockingStackTrace();
+                blockingStackTraceCollector.collect(MetricsQuota.HTTPCLIENT,each.getKey(),stackTraces);
+            }
         }
     }
 }

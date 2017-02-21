@@ -93,7 +93,7 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
             //设置跟踪链的唯一标识
             xprops.put("traceId",ctx.getTraceId());
             //设置跟踪链栈信息
-            xprops.put("trace",ctx.getTraceStack().toString());
+            xprops.put("pAtomIdId",ctx.getTraceStack().isEmpty()?"":ctx.getTraceStack().peek());
             //设置用户请求的地址
             xprops.put("remote",ctx.getRemote());
         }

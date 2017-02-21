@@ -28,7 +28,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
 
     private long pendingTime= 2*60*1000; //默认2分钟
 
-    final private ConcurrentMap<String,BlockService> blockServiceBuffer = new ConcurrentHashMap<String,BlockService>(2048);
+    final private ConcurrentMap<String,LongService> longServices = new ConcurrentHashMap<String,LongService>(2048);
 
     private MetricsHandler handler;
 
@@ -91,8 +91,10 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
         ctx.getTraceStack().add(atomId);
         //方便BLOCKSERVICE获取
         props.put("traceId",ctx.getTraceId());
-        //保存服务调用信息
-        blockServiceBuffer.put(atomId,new BlockService(tags,props));
+        //保存服务调用信息,并发一万的数据丢弃
+        if(longServices.size()< 10000) {
+            longServices.put(atomId, new LongService(tags, props));
+        }
         //执行业务方法
         try{
             return invocation.proceed();
@@ -110,7 +112,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             //把当前的路径出栈
             ctx.getTraceStack().pop();
             //删除调用链信息
-            blockServiceBuffer.remove(atomId);
+            longServices.remove(atomId);
             //记录结束时间
             long endTime= System.currentTimeMillis();
             //记录执行的时间
@@ -127,11 +129,11 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
 
     @Override
     public void doCollect() {
-        for(Iterator<BlockService> each = blockServiceBuffer.values().iterator(); each.hasNext();){
-            BlockService blockService= each.next();
-            Map<String,Object> props= blockService.getProps();
+        for(Iterator<LongService> each = longServices.values().iterator(); each.hasNext();){
+            LongService longService= each.next();
+            Map<String,Object> props= longService.getProps();
             if(System.currentTimeMillis()- (Long)props.get("beginTime")>= pendingTime){
-                handler.handle(MetricsQuota.BLOCKSERVICE,blockService.getTags(),props);
+                handler.handle(MetricsQuota.LONGSERVICE,longService.getTags(),props);
                 //从阻塞队列中删除
                 each.remove();
             }
@@ -139,13 +141,13 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
     }
 }
 
-class BlockService{
+class LongService {
 
     Map<String,String> tags;
 
     Map<String,Object> props;
 
-    BlockService(Map<String,String> tags,Map<String,Object> props){
+    LongService(Map<String,String> tags, Map<String,Object> props){
         this.tags= tags;
         this.props= props;
     }

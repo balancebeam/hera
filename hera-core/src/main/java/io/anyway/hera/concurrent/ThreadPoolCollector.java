@@ -1,11 +1,15 @@
 package io.anyway.hera.concurrent;
 
 import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.BlockingStackTraceCollector;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.collector.MetricsCollector;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
+import io.anyway.hera.spring.BeanPreProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.pool.ConnPoolControl;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
@@ -16,7 +20,7 @@ import java.util.*;
 /**
  * Created by yangzz on 16/8/19.
  */
-public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsCollector {
+public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProcessorWrapper,MetricsCollector {
 
     private MetricsHandler handler;
 
@@ -26,6 +30,12 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
 
     private Set<String> excludedThreadPools= Collections.emptySet();
 
+    private BlockingStackTraceCollector blockingStackTraceCollector;
+
+    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
+        this.blockingStackTraceCollector = blockingStackTraceCollector;
+    }
+
     public void setHandler(MetricsHandler handler){
         this.handler= handler;
     }
@@ -33,6 +43,12 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
     @Override
     public boolean interest(Object bean) {
         return bean instanceof ThreadPoolTaskExecutor;
+    }
+
+    @Override
+    public Object preWrapBean(Object bean, String ctxId, String beanName) {
+        ((ThreadPoolTaskExecutor)bean).setThreadGroupName(beanName+"-Group");
+        return bean;
     }
 
     @Override
@@ -80,7 +96,22 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,MetricsColl
             //任务数包括队列和正在执行的任务
             props.put("taskCount",executor.getThreadPoolExecutor().getTaskCount()-executor.getThreadPoolExecutor().getCompletedTaskCount());
             //发送监控数据
-            handler.handle(MetricsQuota.WORKTHREAD,tags,props);
+            handler.handle(MetricsQuota.THREAD,tags,props);
+
+            //当线程池被占满需要打印堆栈
+            if(executor.getMaxPoolSize()== executor.getActiveCount()){
+                ThreadGroup threadGroup= executor.getThreadGroup();
+                Thread[] threads= new Thread[threadGroup.activeCount()];
+                threadGroup.enumerate(threads);
+
+                List<StackTraceElement[]> stackTraces= new LinkedList<StackTraceElement[]>();
+                for(Thread thread: threads){
+                    if(thread!= null){
+                        stackTraces.add(thread.getStackTrace());
+                    }
+                }
+                blockingStackTraceCollector.collect(MetricsQuota.THREAD,each.getKey(),stackTraces);
+            }
         }
 
     }

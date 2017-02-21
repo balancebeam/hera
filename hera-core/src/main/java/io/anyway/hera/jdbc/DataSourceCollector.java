@@ -1,6 +1,7 @@
 package io.anyway.hera.jdbc;
 
 import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.common.BlockingStackTraceCollector;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.collector.MetricsCollector;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
@@ -27,22 +28,14 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
 
     private MetricsHandler handler;
 
-    public void setHandler(MetricsHandler handler){
-        this.handler= handler;
+    private BlockingStackTraceCollector blockingStackTraceCollector;
+
+    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
+        this.blockingStackTraceCollector = blockingStackTraceCollector;
     }
 
-    /**
-     * Connection阻塞的跟踪有效包路径
-     * @param holdInterestTracePackages
-     */
-    public void setHoldInterestTracePackages(String holdInterestTracePackages){
-        if(holdInterestTracePackages==null ||
-                "".equals(holdInterestTracePackages=holdInterestTracePackages.trim())) {
-            throw new IllegalArgumentException("HOLD_INTEREST_TRACE_PACKAGES should be not empty.");
-        }
-        List<String> holdPackages= Arrays.asList(holdInterestTracePackages.split(","));
-        HoldConnectionInformations.HOLD_INTEREST_TRACE_PACKAGES = holdPackages;
-        logger.info("HOLD_INTEREST_TRACE_PACKAGES: "+holdPackages);
+    public void setHandler(MetricsHandler handler){
+        this.handler= handler;
     }
 
     /**
@@ -148,33 +141,11 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
             props.put("activeCount",jdbcWrapper.getActiveConnectionCount());
             props.put("usedCount",jdbcWrapper.getUsedConnectionCount());
             props.put("holdCount",jdbcWrapper.getHoldedConnectionCount());
-
             handler.handle(MetricsQuota.JDBC,tags,props);
 
             //连接阻塞发出阻塞的服务列表和调用次数
             if(jdbcWrapper.getHoldedConnectionCount()==jdbcWrapper.getMaxActive()){
-                Map<String,Integer> holdServices= new HashMap<String, Integer>();
-                //汇总阻塞方法
-                for(HoldConnectionInformations info: jdbcWrapper.getHoldedConnectionInformationsList()){
-                    String service= info.getMatchingHoldService();
-                    if (service== null){
-                        continue;
-                    }
-                    if(holdServices.containsKey(service)){
-                        holdServices.put(service,holdServices.get(service)+1);
-                    }
-                    else{
-                        holdServices.put(service,1);
-                    }
-                }
-                for(Map.Entry<String,Integer> entry: holdServices.entrySet()){
-                    Map<String,String> btags= new LinkedHashMap<String,String>();
-                    Map<String,Object> bprops= new LinkedHashMap<String, Object>();
-                    btags.put("dataSourceName",each.getKey());
-                    btags.put("service",entry.getKey());
-                    bprops.put("count",entry.getValue());
-                    handler.handle(MetricsQuota.HOLDCONNECTION,btags,bprops);
-                }
+                blockingStackTraceCollector.collect(MetricsQuota.JDBC,each.getKey(),jdbcWrapper.getBlockingStackTraces());
             }
         }
     }
