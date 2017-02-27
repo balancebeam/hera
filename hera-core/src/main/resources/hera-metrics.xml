@@ -53,7 +53,7 @@
 		<property name="handler" ref="metricsHandler"/>
 	</bean>
 
-	<bean id="httpClientCollector" class="io.anyway.hera.httpclient.HttpClientPoolCollector">
+	<bean id="httpClientPoolCollector" class="io.anyway.hera.httpclient.HttpClientPoolCollector">
 		<property name="handler" ref="metricsHandler"/>
 		<property name="blockingStackTraceCollector" ref="blockingStackTraceCollector"/>
 	</bean>
@@ -77,11 +77,13 @@
 				<ref bean="cpuCollector"/>
 				<ref bean="memoryCollector"/>
 				<ref bean="longServiceCollector"/>
-				<ref bean="httpClientCollector"/>
+				<ref bean="httpClientPoolCollector"/>
 				<ref bean="tomcatCollector"/>
 			</list>
 		</property>
 	</bean>
+
+	<bean id="httpClientBeanProcessor" class="io.anyway.hera.httpclient.HttpClientBeanProcessor"/>
 
 	<!-- 自动代理某对象,如数据源和线程池 -->
 	<bean class="io.anyway.hera.spring.MetricsBeanPostProcessor">
@@ -95,7 +97,8 @@
 			<list>
 				<ref bean="dataSourceCollector"/>
 				<ref bean="threadPoolCollector"/>
-				<ref bean="httpClientCollector"/>
+				<ref bean="httpClientPoolCollector"/>
+				<ref bean="httpClientBeanProcessor"/>
 			</list>
 		</property>
 	</bean>

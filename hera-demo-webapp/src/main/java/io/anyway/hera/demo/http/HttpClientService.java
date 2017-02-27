@@ -2,6 +2,7 @@ package io.anyway.hera.demo.http;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -29,7 +30,7 @@ import java.util.Map;
 public class HttpClientService {
 
     @Autowired
-    private CloseableHttpClient httpClient;
+    private HttpClient httpClient;
     @Autowired
     private RequestConfig requestConfig;
 
@@ -49,7 +50,7 @@ public class HttpClientService {
         CloseableHttpResponse response = null;
         try {
             // 执行请求
-            response = httpClient.execute(httpGet);
+            response = (CloseableHttpResponse)httpClient.execute(httpGet);
             // 判断返回状态是否为200
             if (response.getStatusLine().getStatusCode() == 200) {
                 return EntityUtils.toString(response.getEntity(), "UTF-8");
@@ -108,7 +109,7 @@ public class HttpClientService {
         CloseableHttpResponse response = null;
         try {
             // 执行请求
-            response = httpClient.execute(httpPost);
+            response = (CloseableHttpResponse)httpClient.execute(httpPost);
             return new HttpResult(response.getStatusLine().getStatusCode(),
                     EntityUtils.toString(response.getEntity(), "UTF-8"));
         } finally {
@@ -153,7 +154,7 @@ public class HttpClientService {
         CloseableHttpResponse response = null;
         try {
             // 执行请求
-            response = this.httpClient.execute(httpPost);
+            response = (CloseableHttpResponse)this.httpClient.execute(httpPost);
             return new HttpResult(response.getStatusLine().getStatusCode(),
                     EntityUtils.toString(response.getEntity(), "UTF-8"));
         } finally {

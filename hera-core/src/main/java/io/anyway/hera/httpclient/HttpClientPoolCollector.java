@@ -4,6 +4,7 @@ import io.anyway.hera.collector.MetricsCollector;
 import io.anyway.hera.collector.MetricsHandler;
 import io.anyway.hera.common.MetricsQuota;
 import io.anyway.hera.common.BlockingStackTraceCollector;
+import io.anyway.hera.common.MetricsUtils;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,9 +55,7 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
     @Override
     public Object wrapBean(final Object bean, String appId, final String beanName) {
         Class<?> clazz= bean.getClass();
-        Class<?>[] interfaces= new Class<?>[clazz.getInterfaces().length+1];
-        interfaces[0]= HttpClientStackTraceRepository.class;
-        System.arraycopy(clazz.getInterfaces(),0,interfaces,1,clazz.getInterfaces().length);
+        Class<?>[] interfaces= MetricsUtils.getInterfaces(clazz,HttpClientStackTraceRepository.class);
 
         Object result= Proxy.newProxyInstance(clazz.getClassLoader(), interfaces, new InvocationHandler() {
             ConcurrentHashMap<HttpClientConnection,StackTraceElement[]> traceRepository= new ConcurrentHashMap<HttpClientConnection,StackTraceElement[]>();

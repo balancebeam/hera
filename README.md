@@ -1,5 +1,5 @@
 # hera
-application metrics middleware
+Application Metrics Middleware without invasion
 
 ## 监控指标
 
@@ -12,7 +12,9 @@ application metrics middleware
 * HTTP
 * 服务方法
 * 异常
-* 阻塞方法
+* 长服务
+* HttpClient
+* Tomcat
 * 调用链跟踪
 * 告警 
 
