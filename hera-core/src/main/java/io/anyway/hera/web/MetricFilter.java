@@ -1,12 +1,12 @@
 package io.anyway.hera.web;
 
-import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.Constants;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.common.MetricsUtils;
-import io.anyway.hera.common.TraceIdGenerator;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.common.MetricUtils;
+import io.anyway.hera.common.IdGenerator;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.StringUtils;
@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 /**
  * Created by yangzz on 16/8/16.
  */
-public class MetricsFilter implements Filter {
+public class MetricFilter implements Filter {
 
     private ServletContext servletContext;
 
@@ -43,8 +43,8 @@ public class MetricsFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 
-        ApplicationContext applicationContext= MetricsUtils.getWebApplicationContext(servletContext);
-        MetricsHandler handler= applicationContext.getBean(MetricsHandler.class);
+        ApplicationContext applicationContext= MetricUtils.getWebApplicationContext(servletContext);
+        MetricHandler handler= applicationContext.getBean(MetricHandler.class);
         if(handler== null){
             chain.doFilter(req,res);
             return;
@@ -57,36 +57,36 @@ public class MetricsFilter implements Filter {
         }
         //获取跟踪链的信息
         String traceId= request.getHeader(Constants.TRACE_ID);
-        String traceStrackInput= request.getHeader(Constants.TRACE_STACK);
+        String parentId= request.getHeader(Constants.TRACE_PARENT_ID);
         if(StringUtils.isEmpty(traceId)){
             traceId= request.getParameter(Constants.TRACE_ID);
-            traceStrackInput= request.getParameter(Constants.TRACE_STACK);
+            parentId= request.getParameter(Constants.TRACE_PARENT_ID);
         }
         Stack<String> traceStack= new Stack<String>();
         //如果调用链为空则需要创建一个调用链
         if(StringUtils.isEmpty(traceId)){
-            traceId= TraceIdGenerator.next();
-            if(!StringUtils.isEmpty(traceStrackInput)) {
-                traceStack.addAll(Arrays.asList(traceStrackInput.split(",")));
-            }
+            traceId= IdGenerator.next();
+        }
+        if(!StringUtils.isEmpty(parentId)) {
+            traceStack.push(parentId);
         }
         //把跟踪链的信息绑定到日志里,方便做日志跟踪
         MDC.put("traceId",traceId);
         //构造监控上下文
-        MetricsTraceContext ctx= new MetricsTraceContext();
+        MetricTraceContext ctx= new MetricTraceContext();
         ctx.setTraceId(traceId);
         ctx.setTraceStack(traceStack);
         ctx.setRemote(request.getRemoteHost());
         //绑定监控上下文到Threadlocal
-        MetricsTraceContextHolder.setMetricsTraceContext(ctx);
+        MetricTraceContextHolder.setMetricTraceContext(ctx);
 
-        String atomId= TraceIdGenerator.next();
+        String spanId= IdGenerator.next();
         long beginTime= System.currentTimeMillis();
 
         Map<String,Object> props= new LinkedHashMap<String,Object>();
         Map<String,String> tags= null;
         //设置该请求的唯一ID
-        props.put("atomId",atomId);
+        props.put("spanId",spanId);
         //设置请求的http URL
         String url= request.getRequestURI();
         props.put("url",url);
@@ -104,7 +104,7 @@ public class MetricsFilter implements Filter {
         //记录请求开始时间
         props.put("beginTime", beginTime);
         //把当前的路径入栈
-        traceStack.add(atomId);
+        traceStack.add(spanId);
 
         try{
             //调用过滤链
@@ -113,10 +113,11 @@ public class MetricsFilter implements Filter {
             //如果存在异常记录异常信息
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricsQuota.HTTP.toString());
+            xtags.put("quota", MetricQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+            xprops.put("beginTime",System.currentTimeMillis());
+            handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
 
             if(ex instanceof IOException){
                 throw (IOException)ex;
@@ -129,15 +130,17 @@ public class MetricsFilter implements Filter {
             }
         }
         finally{
-            MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
+            MetricTraceContextHolder.getMetricTraceContext().getTraceStack().pop();
             //记录结束时间
             long endTime= System.currentTimeMillis();
             //记录执行的时间
             props.put("duration",endTime-beginTime);
             //发送监控记录
-            handler.handle(MetricsQuota.HTTP,tags,props);
+            handler.handle(MetricQuota.HTTP,tags,props);
             //清空上下文
-            MetricsTraceContextHolder.clear();
+            MetricTraceContextHolder.clear();
+            //清除日志
+            MDC.remove("traceId");
         }
     }
 

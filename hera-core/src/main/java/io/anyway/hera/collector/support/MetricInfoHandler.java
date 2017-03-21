@@ -1,9 +1,10 @@
 package io.anyway.hera.collector.support;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -16,9 +17,10 @@ import java.util.Map;
 /**
  * Created by yangzz on 16/11/29.
  */
-public class InfoMetricsHandler implements MetricsHandler,InitializingBean {
+@NonMetricService
+public class MetricInfoHandler implements MetricHandler,InitializingBean {
 
-    private Log logger= LogFactory.getLog(InfoMetricsHandler.class);
+    private Log logger= LogFactory.getLog(MetricInfoHandler.class);
 
     private String group;
 
@@ -29,11 +31,11 @@ public class InfoMetricsHandler implements MetricsHandler,InitializingBean {
     }
 
     @Override
-    public void handle(final MetricsQuota quota, Map<String, String> tags, Map<String, Object> props) {
+    public void handle(final MetricQuota quota, Map<String, String> tags, Map<String, Object> props) {
 
         Map<String,Object> xprops= new LinkedHashMap<String, Object>(props);
         //获取跟踪链上下文
-        MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+        MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
         if(ctx!= null){
             //设置跟踪链的唯一标识
             xprops.put("traceId",ctx.getTraceId());

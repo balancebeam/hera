@@ -1,6 +1,6 @@
 package io.anyway.hera.collector;
 
-import io.anyway.hera.collector.MetricsCollector;
+import io.anyway.hera.service.NonMetricService;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -12,7 +12,10 @@ import java.util.TimerTask;
 /**
  * Created by yangzz on 16/8/19.
  */
-public class MetricsCollectorTimer extends TimerTask implements ApplicationListener<ContextRefreshedEvent>,DisposableBean {
+import org.springframework.stereotype.Component;
+
+@NonMetricService
+public class MetricCollectorTimer extends TimerTask implements ApplicationListener<ContextRefreshedEvent>,DisposableBean {
 
     private Timer timer;
 
@@ -20,7 +23,7 @@ public class MetricsCollectorTimer extends TimerTask implements ApplicationListe
 
     private int period= 5000;
 
-    private List<MetricsCollector> collectors;
+    private List<MetricCollector> collectors;
 
     public void setDelay(int delay) {
         this.delay = delay;
@@ -30,13 +33,13 @@ public class MetricsCollectorTimer extends TimerTask implements ApplicationListe
         this.period = period;
     }
 
-    public void setCollectors(List<MetricsCollector> collectors){
+    public void setCollectors(List<MetricCollector> collectors){
         this.collectors= collectors;
     }
 
     @Override
     public void run(){
-        for (MetricsCollector each : collectors) {
+        for (MetricCollector each : collectors) {
             try {
                 each.doCollect();
             }catch(Throwable e){

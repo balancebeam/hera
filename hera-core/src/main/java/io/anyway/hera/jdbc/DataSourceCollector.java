@@ -1,9 +1,10 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.BlockingStackTraceCollector;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.collector.MetricsCollector;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,7 +19,8 @@ import java.util.*;
 /**
  * Created by yangzz on 16/8/17.
  */
-public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsCollector {
+@NonMetricService
+public class DataSourceCollector implements BeanPostProcessorWrapper,MetricCollector {
 
     private Log logger= LogFactory.getLog(DataSourceCollector.class);
 
@@ -26,7 +28,7 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
 
     private List<String> excludedDatasources;
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private BlockingStackTraceCollector blockingStackTraceCollector;
 
@@ -34,7 +36,7 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
         this.blockingStackTraceCollector = blockingStackTraceCollector;
     }
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -141,11 +143,11 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricsColl
             props.put("activeCount",jdbcWrapper.getActiveConnectionCount());
             props.put("usedCount",jdbcWrapper.getUsedConnectionCount());
             props.put("holdCount",jdbcWrapper.getHoldedConnectionCount());
-            handler.handle(MetricsQuota.JDBC,tags,props);
+            handler.handle(MetricQuota.JDBC,tags,props);
 
             //连接阻塞发出阻塞的服务列表和调用次数
             if(jdbcWrapper.getHoldedConnectionCount()==jdbcWrapper.getMaxActive()){
-                blockingStackTraceCollector.collect(MetricsQuota.JDBC,each.getKey(),jdbcWrapper.getBlockingStackTraces());
+                blockingStackTraceCollector.collect(MetricQuota.JDBC,each.getKey(),jdbcWrapper.getBlockingStackTraces());
             }
         }
     }

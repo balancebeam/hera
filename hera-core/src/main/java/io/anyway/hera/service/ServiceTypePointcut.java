@@ -21,7 +21,7 @@ public class ServiceTypePointcut implements Pointcut {
 
     private Log logger= LogFactory.getLog(ServiceTypePointcut.class);
 
-    private Class<? extends Annotation>[] pointcutTypes= new Class[]{ServiceMetrics.class};
+    private Class<? extends Annotation>[] pointcutTypes= new Class[]{MetricService.class};
 
     final private MetricsMethodMatcher metricsMethodMatcher;
 
@@ -51,6 +51,9 @@ public class ServiceTypePointcut implements Pointcut {
                 }
             }
             if(!CollectionUtils.isEmpty(result)) {
+                if(!result.contains(MetricService.class)){
+                    result.add(MetricService.class);
+                }
                 this.pointcutTypes = result.toArray(new Class[result.size()]);
             }
         }

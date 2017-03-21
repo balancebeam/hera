@@ -1,10 +1,11 @@
 package io.anyway.hera.httpclient;
 
-import io.anyway.hera.collector.MetricsCollector;
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
 import io.anyway.hera.common.BlockingStackTraceCollector;
-import io.anyway.hera.common.MetricsUtils;
+import io.anyway.hera.common.MetricUtils;
+import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,17 +30,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by yangzz on 17/1/4.
  */
-public class HttpClientPoolCollector implements BeanPostProcessorWrapper,MetricsCollector {
+@NonMetricService
+public class HttpClientPoolCollector implements BeanPostProcessorWrapper,MetricCollector {
 
     private Log logger= LogFactory.getLog(HttpClientPoolCollector.class);
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private BlockingStackTraceCollector blockingStackTraceCollector;
 
     private final Map<String,ConnPoolControl<HttpRoute>> pool= new LinkedHashMap<String,ConnPoolControl<HttpRoute>>();
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -55,7 +57,7 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
     @Override
     public Object wrapBean(final Object bean, String appId, final String beanName) {
         Class<?> clazz= bean.getClass();
-        Class<?>[] interfaces= MetricsUtils.getInterfaces(clazz,HttpClientStackTraceRepository.class);
+        Class<?>[] interfaces= MetricUtils.getInterfaces(clazz,HttpClientStackTraceRepository.class);
 
         Object result= Proxy.newProxyInstance(clazz.getClassLoader(), interfaces, new InvocationHandler() {
             ConcurrentHashMap<HttpClientConnection,StackTraceElement[]> traceRepository= new ConcurrentHashMap<HttpClientConnection,StackTraceElement[]>();
@@ -112,12 +114,12 @@ public class HttpClientPoolCollector implements BeanPostProcessorWrapper,Metrics
             props.put("leased",stats.getLeased());
             props.put("max",stats.getMax());
             props.put("pending",stats.getPending());
-            handler.handle(MetricsQuota.HTTPCLIENT,tags,props);
+            handler.handle(MetricQuota.HTTPCLIENT,tags,props);
 
             //资源已满打印堆栈
             if(stats.getMax()==stats.getLeased()){
                 Collection<StackTraceElement[]> stackTraces= ((HttpClientStackTraceRepository)connPoolControl).getBlockingStackTrace();
-                blockingStackTraceCollector.collect(MetricsQuota.HTTPCLIENT,each.getKey(),stackTraces);
+                blockingStackTraceCollector.collect(MetricQuota.HTTPCLIENT,each.getKey(),stackTraces);
             }
         }
     }

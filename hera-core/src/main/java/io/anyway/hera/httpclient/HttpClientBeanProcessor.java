@@ -1,9 +1,10 @@
 package io.anyway.hera.httpclient;
 
 import io.anyway.hera.common.Constants;
-import io.anyway.hera.common.MetricsUtils;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.common.MetricUtils;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
+import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,6 +19,7 @@ import java.lang.reflect.Proxy;
 /**
  * Created by yangzz on 17/2/27.
  */
+@NonMetricService
 public class HttpClientBeanProcessor implements BeanPostProcessorWrapper {
 
     private Log logger= LogFactory.getLog(HttpClientBeanProcessor.class);
@@ -30,19 +32,19 @@ public class HttpClientBeanProcessor implements BeanPostProcessorWrapper {
     @Override
     public Object wrapBean(final Object bean, String appId, String beanName) {
         Class<?> clazz= bean.getClass();
-        Class<?>[] interfaces= MetricsUtils.getInterfaces(clazz);
+        Class<?>[] interfaces= MetricUtils.getInterfaces(clazz);
         Object result= Proxy.newProxyInstance(clazz.getClassLoader(),interfaces,new InvocationHandler(){
             ThreadLocal<Boolean> sign= new ThreadLocal<Boolean>();
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+                MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
                 if(ctx!= null && sign.get()== null && "execute".equals(method.getName())){
                     for(Object each: args){
                         if(each instanceof HttpRequestBase){
                             HttpRequestBase httpRequestBase= (HttpRequestBase)each;
                             URIBuilder uriBuilder= new URIBuilder(httpRequestBase.getURI().toString());
                             uriBuilder.addParameter(Constants.TRACE_ID,ctx.getTraceId());
-                            uriBuilder.addParameter(Constants.TRACE_STACK,ctx.getTraceStack().peek());
+                            uriBuilder.addParameter(Constants.TRACE_PARENT_ID,ctx.getTraceStack().peek());
                             httpRequestBase.setURI(uriBuilder.build());
                             if(logger.isDebugEnabled()){
                                 logger.debug("add trace to http query parameters  : "+httpRequestBase.getURI().toString());

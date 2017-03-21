@@ -8,7 +8,7 @@
     <display-name>Sample hera demo</display-name>
     
     <listener>
-        <listener-class>io.anyway.hera.web.MetricsListener</listener-class>
+        <listener-class>io.anyway.hera.web.MetricListener</listener-class>
     </listener>
 
     <filter>
@@ -31,7 +31,7 @@
 
     <filter>
         <filter-name>metricsFilter</filter-name>
-        <filter-class>io.anyway.hera.web.MetricsFilter</filter-class>
+        <filter-class>io.anyway.hera.web.MetricFilter</filter-class>
     </filter>
 
     <filter-mapping>

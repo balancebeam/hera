@@ -1,5 +1,6 @@
 package io.anyway.hera.mybatis;
 
+import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPreProcessorWrapper;
 import org.apache.ibatis.plugin.Interceptor;
 import org.mybatis.spring.SqlSessionFactoryBean;
@@ -10,6 +11,7 @@ import java.lang.reflect.Field;
 /**
  * Created by yangzz on 17/1/3.
  */
+@NonMetricService
 public class MybatisPluginProcessor implements BeanPreProcessorWrapper{
 
     private Interceptor interceptor;

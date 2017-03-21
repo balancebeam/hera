@@ -1,18 +1,18 @@
 package io.anyway.hera.spring;
 
-import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.Constants;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.common.TraceIdGenerator;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.common.IdGenerator;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
+import io.anyway.hera.service.NonMetricService;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -24,15 +24,16 @@ import java.util.regex.Pattern;
 /**
  * Created by yangzz on 16/11/20.
  */
-public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
+@NonMetricService
+public class MetricHttpInterceptor implements HandlerInterceptor,Ordered {
 
     private ThreadLocal<Map<String,Object>> holder= new ThreadLocal<Map<String,Object>>();
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private List<Pattern> regExes= Collections.emptyList();
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -53,7 +54,7 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         holder.remove();
 
         //如果在Filter处理过,或者嵌套拦截器处理过就不处理
-        if(MetricsTraceContextHolder.getMetricsTraceContext()!= null){
+        if(MetricTraceContextHolder.getMetricTraceContext()!= null){
             return true;
         }
 
@@ -63,42 +64,42 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         }
         //获取跟踪链的信息
         String traceId= request.getHeader(Constants.TRACE_ID);
-        String traceStrackInput= request.getHeader(Constants.TRACE_STACK);
+        String parentId= request.getHeader(Constants.TRACE_PARENT_ID);
         if(StringUtils.isEmpty(traceId)){
             traceId= request.getParameter(Constants.TRACE_ID);
-            traceStrackInput= request.getParameter(Constants.TRACE_STACK);
+            parentId= request.getParameter(Constants.TRACE_PARENT_ID);
         }
         Stack<String> traceStack= new Stack<String>();
         //如果调用链为空则需要创建一个调用链
         if(StringUtils.isEmpty(traceId)){
-            traceId= TraceIdGenerator.next();
-            if(!StringUtils.isEmpty(traceStrackInput)) {
-                traceStack.addAll(Arrays.asList(traceStrackInput.split(",")));
-            }
+            traceId= IdGenerator.next();
+        }
+        if(!StringUtils.isEmpty(parentId)) {
+            traceStack.push(parentId);
         }
         //把跟踪链的信息绑定到日志里,方便做日志跟踪
         MDC.put("traceId",traceId);
         //构造监控上下文
-        MetricsTraceContext ctx= new MetricsTraceContext();
+        MetricTraceContext ctx= new MetricTraceContext();
         ctx.setTraceId(traceId);
         ctx.setTraceStack(traceStack);
         ctx.setRemote(request.getRemoteHost());
         //绑定监控上下文到Threadlocal
-        MetricsTraceContextHolder.setMetricsTraceContext(ctx);
+        MetricTraceContextHolder.setMetricTraceContext(ctx);
 
-        String atomId= TraceIdGenerator.next();
+        String spanId= IdGenerator.next();
         long beginTime= System.currentTimeMillis();
 
         Map<String,Object> props= new LinkedHashMap<String,Object>();
 
         //设置该请求的唯一ID
-        props.put("atomId",atomId);
+        props.put("spanId",spanId);
         //设置请求的http URL
         props.put("url",request.getRequestURI());
         //记录请求开始时间
         props.put("beginTime", beginTime);
         //把当前的路径入栈
-        traceStack.add(atomId);
+        traceStack.add(spanId);
         holder.set(props);
 
         return true;
@@ -128,13 +129,14 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
         if(ex!= null){
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricsQuota.HTTP.toString());
+            xtags.put("quota", MetricQuota.HTTP.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            this.handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+            xprops.put("beginTime",System.currentTimeMillis());
+            this.handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
         }
 
-        MetricsTraceContextHolder.getMetricsTraceContext().getTraceStack().pop();
+        MetricTraceContextHolder.getMetricTraceContext().getTraceStack().pop();
         //记录结束时间
         long endTime= System.currentTimeMillis();
         Map<String,String> tags= null;
@@ -153,10 +155,11 @@ public class HttpMetricsInterceptor implements HandlerInterceptor,Ordered {
             }
         }
         //发送监控记录
-        this.handler.handle(MetricsQuota.HTTP,tags,props);
+        this.handler.handle(MetricQuota.HTTP,tags,props);
         //清空上下文变量
-        MetricsTraceContextHolder.clear();
+        MetricTraceContextHolder.clear();
         holder.remove();
+        MDC.remove("traceId");
     }
 
     @Override

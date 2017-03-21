@@ -4,10 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.serializer.ValueFilter;
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -16,7 +17,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.net.InetAddress;
@@ -30,9 +30,10 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by yangzz on 16/9/13.
  */
-public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,DisposableBean{
+@NonMetricService
+public class MetricKafkaHandler implements MetricHandler,InitializingBean,DisposableBean{
 
-    private Log logger= LogFactory.getLog(KafkaMetricsHandler.class);
+    private Log logger= LogFactory.getLog(MetricKafkaHandler.class);
 
     private String servers;
 
@@ -84,16 +85,16 @@ public class KafkaMetricsHandler implements MetricsHandler,InitializingBean,Disp
     private SerializerFeature[] features=new SerializerFeature[0];
 
     @Override
-    public void handle(final MetricsQuota type, final Map<String, String> tags, final Map<String, Object> props) {
+    public void handle(final MetricQuota type, final Map<String, String> tags, final Map<String, Object> props) {
 
         Map<String,Object> xprops= new LinkedHashMap<String, Object>(props);
         //获取跟踪链上下文
-        MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+        MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
         if(ctx!= null){
             //设置跟踪链的唯一标识
             xprops.put("traceId",ctx.getTraceId());
             //设置跟踪链栈信息
-            xprops.put("pAtomIdId",ctx.getTraceStack().isEmpty()?"":ctx.getTraceStack().peek());
+            xprops.put("parentId",ctx.getTraceStack().isEmpty()?"":ctx.getTraceStack().peek());
             //设置用户请求的地址
             xprops.put("remote",ctx.getRemote());
         }

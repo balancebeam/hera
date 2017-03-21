@@ -1,7 +1,7 @@
 package io.anyway.hera.jdbc;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,7 +27,7 @@ class JdbcWrapper {
 
     private final static Log logger= LogFactory.getLog(JdbcWrapper.class);
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     static Map<String,String> DATASOURCE_CONFIG_METADATA= new LinkedHashMap<String, String>();
 
@@ -54,7 +54,7 @@ class JdbcWrapper {
 
     private static final int MAX_USED_CONNECTION_INFORMATIONS = 500;
 
-    JdbcWrapper(MetricsHandler handler) {
+    JdbcWrapper(MetricHandler handler) {
         this.handler= handler;
     }
 
@@ -228,10 +228,7 @@ class JdbcWrapper {
                 ACTIVE_CONNECTION_COUNT.decrementAndGet();
             }
         }
-        Map<String,Object> props= JdbcWrapperHelper.getMetricsProps();
-        if(props== null) {
-            props= new LinkedHashMap<String, Object>();
-        }
+        Map<String,Object> props= new LinkedHashMap<String, Object>();
         final long beginTime = System.currentTimeMillis();
         //设置开始时间
         props.put("beginTime",beginTime);
@@ -246,10 +243,11 @@ class JdbcWrapper {
                     Throwable ex= e.getCause();
                     Map<String,String> xtags= new LinkedHashMap<String,String>();
                     xtags.put("class",ex.getClass().getSimpleName());
-                    xtags.put("quota", MetricsQuota.SQL.toString());
+                    xtags.put("quota", MetricQuota.SQL.toString());
                     Map<String,Object> xprops= new LinkedHashMap<String,Object>();
                     xprops.put("message",ex.getMessage());
-                    handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+                    xprops.put("beginTime",System.currentTimeMillis());
+                    handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
                 }
             }
             throw e;
@@ -259,13 +257,11 @@ class JdbcWrapper {
             //设置调用方法名称
             props.put("sql",requestName);
             //记录sql语句的长度大小
-            props.put("sql-size",requestName.length());
+            props.put("length",requestName.length());
             //记录执行的时间
-            props.put("sql-duration",endTime-beginTime);
+            props.put("duration",endTime-beginTime);
             //发送监控记录
-            if( JdbcWrapperHelper.getMetricsProps()== null) {
-                handler.handle(MetricsQuota.SQL, null, props);
-            }
+            handler.handle(MetricQuota.SQL, null, props);
         }
     }
 

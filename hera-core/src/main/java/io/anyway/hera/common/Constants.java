@@ -5,7 +5,7 @@ package io.anyway.hera.common;
  */
 public interface Constants {
 
-    final public static String TRACE_ID = "metrics-trace-id";
-    final public static String TRACE_STACK = "metrics-trace-stack";
+    final public static String TRACE_ID = "metric-trace-id";
+    final public static String TRACE_PARENT_ID = "metric-trace-parent-id";
 
 }

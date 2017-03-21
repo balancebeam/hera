@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * Created by yangzz on 16/11/29.
  */
-final public class MetricsUtils {
+final public class MetricUtils {
 
     private static ThreadLocal<SimpleDateFormat> holder= new ThreadLocal<SimpleDateFormat>();
 

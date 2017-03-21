@@ -1,12 +1,12 @@
 package io.anyway.hera.service;
 
 
-import io.anyway.hera.collector.MetricsCollector;
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.common.TraceIdGenerator;
-import io.anyway.hera.context.MetricsTraceContext;
-import io.anyway.hera.context.MetricsTraceContextHolder;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.common.IdGenerator;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.MDC;
@@ -24,17 +24,18 @@ import java.util.regex.Pattern;
 /**
  * Created by yangzz on 16/8/13.
  */
-public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,Ordered {
+@NonMetricService
+public class ServiceMethodAdvisor implements MethodInterceptor,MetricCollector,Ordered {
 
     private long pendingTime= 2*60*1000; //默认2分钟
 
     final private ConcurrentMap<String,LongService> longServices = new ConcurrentHashMap<String,LongService>(2048);
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private List<Pattern> regExes= Collections.emptyList();
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -71,29 +72,29 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
         //记录请求开始时间
         props.put("beginTime",beginTime);
         //自动生成方法标识
-        String atomId= TraceIdGenerator.next();
+        String spanId= IdGenerator.next();
         //设置该请求的唯一ID
-        props.put("atomId",atomId);
+        props.put("spanId",spanId);
         //获取监控上下文
-        MetricsTraceContext ctx= MetricsTraceContextHolder.getMetricsTraceContext();
+        MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
         //如果是本地调用
         if (ctx== null) {
-            String traceId= TraceIdGenerator.next();
+            String traceId= IdGenerator.next();
             MDC.put("traceId",traceId);
             //构造监控上下文
-            ctx= new MetricsTraceContext();
+            ctx= new MetricTraceContext();
             ctx.setTraceId(traceId);
             ctx.setTraceStack(new Stack<String>());
             ctx.setRemote("local");
-            MetricsTraceContextHolder.setMetricsTraceContext(ctx);
+            MetricTraceContextHolder.setMetricTraceContext(ctx);
         }
         //把当前的路径入栈
-        ctx.getTraceStack().add(atomId);
+        ctx.getTraceStack().add(spanId);
         //方便BLOCKSERVICE获取
         props.put("traceId",ctx.getTraceId());
         //保存服务调用信息,并发一万的数据丢弃
         if(longServices.size()< 10000) {
-            longServices.put(atomId, new LongService(tags, props));
+            longServices.put(spanId, new LongService(tags, props));
         }
         //执行业务方法
         try{
@@ -102,23 +103,24 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             //如果存在异常记录异常信息
             Map<String,String> xtags= new LinkedHashMap<String,String>();
             xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricsQuota.SERVICE.toString());
+            xtags.put("quota", MetricQuota.SERVICE.toString());
             Map<String,Object> xprops= new LinkedHashMap<String,Object>();
             xprops.put("message",ex.getMessage());
-            handler.handle(MetricsQuota.EXCEPTION,xtags,xprops);
+            xprops.put("beginTime",System.currentTimeMillis());
+            handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
             throw ex;
         }
         finally {
             //把当前的路径出栈
             ctx.getTraceStack().pop();
             //删除调用链信息
-            longServices.remove(atomId);
+            longServices.remove(spanId);
             //记录结束时间
             long endTime= System.currentTimeMillis();
             //记录执行的时间
             props.put("duration",endTime - beginTime);
             //发送监控记录
-            handler.handle(MetricsQuota.SERVICE,tags,props);
+            handler.handle(MetricQuota.SERVICE,tags,props);
         }
     }
 
@@ -133,7 +135,7 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricsCollector,
             LongService longService= each.next();
             Map<String,Object> props= longService.getProps();
             if(System.currentTimeMillis()- (Long)props.get("beginTime")>= pendingTime){
-                handler.handle(MetricsQuota.LONGSERVICE,longService.getTags(),props);
+                handler.handle(MetricQuota.LONGSERVICE,longService.getTags(),props);
                 //从阻塞队列中删除
                 each.remove();
             }

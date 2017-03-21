@@ -1,8 +1,9 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.collector.MetricsCollector;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,17 +19,18 @@ import java.util.Map;
 /**
  * Created by yangzz on 16/8/24.
  */
-public class MemoryCollector implements MetricsCollector,InitializingBean {
+@NonMetricService
+public class MemoryCollector implements MetricCollector,InitializingBean {
 
     private long m_unit= 1024*1024;
 
     private Log logger= LogFactory.getLog(MemoryCollector.class);
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private Map<String,Map<String,Long>> lastGCVals= new LinkedHashMap<String, Map<String, Long>>(2);
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -91,7 +93,7 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
         }
         //发送采集信息
         props.put("timestamp",System.currentTimeMillis());
-        handler.handle(MetricsQuota.MEMORY,null,props);
+        handler.handle(MetricQuota.MEMORY,null,props);
 
         //采集内存垃圾回收信息
         for(GarbageCollectorMXBean each: ManagementFactory.getGarbageCollectorMXBeans()){
@@ -121,7 +123,7 @@ public class MemoryCollector implements MetricsCollector,InitializingBean {
             //内存池名称
             props.put("MemoryPoolNames", Arrays.asList(each.getMemoryPoolNames()).toString());
             //发送GC监控信息
-            handler.handle(MetricsQuota.GC,tags,props);
+            handler.handle(MetricQuota.GC,tags,props);
         }
     }
 

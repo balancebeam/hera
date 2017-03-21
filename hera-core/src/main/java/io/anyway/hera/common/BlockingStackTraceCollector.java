@@ -1,6 +1,6 @@
 package io.anyway.hera.common;
 
-import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.collector.MetricHandler;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -13,9 +13,9 @@ public class BlockingStackTraceCollector {
 
     private List<Pattern> regExps= Collections.emptyList();
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -29,7 +29,7 @@ public class BlockingStackTraceCollector {
         }
     }
 
-    public void collect(MetricsQuota quota,
+    public void collect(MetricQuota quota,
                         String pool,
                         Collection<StackTraceElement[]> stackTraces){
         Map<String,Integer> traceMapping= new HashMap<String, Integer>();
@@ -53,7 +53,7 @@ public class BlockingStackTraceCollector {
             tags.put("pool",pool);
             tags.put("service",each.getKey());
             props.put("count",each.getValue());
-            handler.handle(MetricsQuota.BLOCKINGSTACKTRACE,tags,props);
+            handler.handle(MetricQuota.BLOCKINGSTACKTRACE,tags,props);
         }
     }
 

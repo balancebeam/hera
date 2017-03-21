@@ -1,5 +1,6 @@
 package io.anyway.hera.spring;
 
+import io.anyway.hera.service.NonMetricService;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -13,7 +14,8 @@ import java.util.Map;
 /**
  * Created by yangzz on 16/8/17.
  */
-public class MetricsBeanPostProcessor implements BeanPostProcessor, PriorityOrdered,DisposableBean{
+@NonMetricService
+public class MetricBeanPostProcessor implements BeanPostProcessor, PriorityOrdered,DisposableBean{
 
     private Map<String,BeanPostProcessorWrapper> wrapperIdx= new HashMap<String, BeanPostProcessorWrapper>();
 

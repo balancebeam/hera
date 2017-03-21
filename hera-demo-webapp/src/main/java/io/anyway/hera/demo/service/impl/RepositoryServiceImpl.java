@@ -3,7 +3,7 @@ package io.anyway.hera.demo.service.impl;
 import io.anyway.hera.demo.dao.RepositoryDao;
 import io.anyway.hera.demo.domain.RepositoryDO;
 import io.anyway.hera.demo.service.RepositoryService;
-import io.anyway.hera.service.ServiceMetrics;
+import io.anyway.hera.service.MetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Random;
@@ -38,7 +37,7 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
-    @ServiceMetrics
+    @MetricService
     public void f2() {
         logger.info("----------------invoke-------f2");
         try {

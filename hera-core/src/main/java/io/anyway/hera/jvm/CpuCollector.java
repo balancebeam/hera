@@ -1,8 +1,9 @@
 package io.anyway.hera.jvm;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.collector.MetricsCollector;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.ReflectionUtils;
@@ -16,9 +17,10 @@ import java.util.Map;
 /**
  * Created by yangzz on 16/8/24.
  */
-public class CpuCollector implements MetricsCollector {
+@NonMetricService
+public class CpuCollector implements MetricCollector {
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private Method method;
 
@@ -36,7 +38,7 @@ public class CpuCollector implements MetricsCollector {
         }
     }
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -60,7 +62,7 @@ public class CpuCollector implements MetricsCollector {
             props.put("systemLoadAverage", loadedAverage>0?loadedAverage/operatingSystem.getAvailableProcessors():loadedAverage);
         }
         //发送采集信息
-        handler.handle(MetricsQuota.CPU,null,props);
+        handler.handle(MetricQuota.CPU,null,props);
     }
 
 //    private boolean isSunOsMBean(OperatingSystemMXBean operatingSystem) {

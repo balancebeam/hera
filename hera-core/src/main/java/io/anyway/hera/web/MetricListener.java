@@ -1,8 +1,8 @@
 package io.anyway.hera.web;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.common.MetricsUtils;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.common.MetricUtils;
 import org.springframework.context.ApplicationContext;
 
 import javax.servlet.ServletContext;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by yangzz on 16/8/17.
  */
-public class MetricsListener implements HttpSessionListener, HttpSessionActivationListener,
+public class MetricListener implements HttpSessionListener, HttpSessionActivationListener,
         ServletContextListener, Serializable {
 
     private AtomicInteger SESSION_COUNT = new AtomicInteger();
@@ -99,10 +99,10 @@ public class MetricsListener implements HttpSessionListener, HttpSessionActivati
     private void doMonitor(){
         Map<String,Object> props= new LinkedHashMap<String, Object>();
         props.put("count",SESSION_COUNT.get());
-        ApplicationContext ctx= MetricsUtils.getWebApplicationContext(servletContext);
+        ApplicationContext ctx= MetricUtils.getWebApplicationContext(servletContext);
         if(ctx!= null) {
-            MetricsHandler handler = ctx.getBean(MetricsHandler.class);
-            handler.handle(MetricsQuota.SESSION, null, props);
+            MetricHandler handler = ctx.getBean(MetricHandler.class);
+            handler.handle(MetricQuota.SESSION, null, props);
         }
     }
 

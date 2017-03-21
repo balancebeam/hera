@@ -1,8 +1,8 @@
 package io.anyway.hera.tomcat;
 
-import io.anyway.hera.collector.MetricsCollector;
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
 import io.anyway.hera.jvm.MBeans;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * Created by yangzz on 16/12/20.
  */
-public class TomcatCollector implements MetricsCollector {
+public class TomcatCollector implements MetricCollector {
 
     private final Log logger= LogFactory.getLog(TomcatCollector.class);
 
@@ -27,7 +27,7 @@ public class TomcatCollector implements MetricsCollector {
 
     private Map<String,ObjectName> GLOBAL_REQUEST_PROCESSORS;
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     public TomcatCollector(){
         if (!TOMCAT_USED) {
@@ -57,7 +57,7 @@ public class TomcatCollector implements MetricsCollector {
         }
     }
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -84,7 +84,7 @@ public class TomcatCollector implements MetricsCollector {
                     props.put("processingTime",(Long) mBeans.getAttribute(grp, "processingTime"));
                     props.put("maxTime",(Long) mBeans.getAttribute(grp, "maxTime"));
                 }
-                handler.handle(MetricsQuota.TOMCAT,tags,props);
+                handler.handle(MetricQuota.TOMCAT,tags,props);
             }
         } catch (JMException e) {
             logger.error(e);

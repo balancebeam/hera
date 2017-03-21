@@ -1,32 +1,30 @@
 package io.anyway.hera.concurrent;
 
-import io.anyway.hera.collector.MetricsHandler;
+import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.BlockingStackTraceCollector;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.collector.MetricsCollector;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.collector.MetricCollector;
+import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import io.anyway.hera.spring.BeanPreProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.conn.routing.HttpRoute;
-import org.apache.http.pool.ConnPoolControl;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Field;
 import java.util.*;
 
 /**
  * Created by yangzz on 16/8/19.
  */
-public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProcessorWrapper,MetricsCollector {
+@NonMetricService
+public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProcessorWrapper,MetricCollector {
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private Log logger= LogFactory.getLog(ThreadPoolCollector.class);
 
-    private Map<String,ThreadPoolTaskExecutor> threadPools= new LinkedHashMap<String,ThreadPoolTaskExecutor>();
+    private Map<String,ThreadPoolWrapper> threadPools= new LinkedHashMap<String,ThreadPoolWrapper>();
 
     private Set<String> excludedThreadPools= Collections.emptySet();
 
@@ -36,7 +34,7 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
         this.blockingStackTraceCollector = blockingStackTraceCollector;
     }
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
@@ -54,9 +52,10 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
     @Override
     public synchronized Object wrapBean(Object bean,String appId, String beanName) {
         if(!excludedThreadPools.contains(beanName)){
-            threadPools.put((StringUtils.isEmpty(appId)?"":appId+":")+beanName,(ThreadPoolTaskExecutor)bean);
-
+            ThreadPoolWrapper threadPoolWrapper= new ThreadPoolWrapper((ThreadPoolTaskExecutor)bean);
+            threadPools.put((StringUtils.isEmpty(appId)?"":appId+":")+beanName,threadPoolWrapper);
             logger.info("Monitor thread pool: "+beanName);
+            return threadPoolWrapper;
         }
         return bean;
     }
@@ -74,8 +73,8 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
     @Override
     public void doCollect() {
         //工作线程池收集
-        for (Map.Entry<String,ThreadPoolTaskExecutor> each: threadPools.entrySet()){
-            ThreadPoolTaskExecutor executor= each.getValue();
+        for (Map.Entry<String,ThreadPoolWrapper> each: threadPools.entrySet()){
+            ThreadPoolWrapper executor= each.getValue();
             Map<String,String> tags= new LinkedHashMap<String,String>();
             Map<String,Object> props= new LinkedHashMap<String, Object>();
             //工作线程池的名称
@@ -88,15 +87,12 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
             props.put("corePoolSize",executor.getPoolSize());
             //超时时间
             props.put("keepAliveSeconds",executor.getKeepAliveSeconds());
-            Field f= ReflectionUtils.findField(ThreadPoolTaskExecutor.class,"queueCapacity");
-            ReflectionUtils.makeAccessible(f);
-            int queueCapacity= (Integer) ReflectionUtils.getField(f,executor);
             //最大队列数
-            props.put("queueCapacity",queueCapacity);
+            props.put("queueCapacity",executor.getQueueCapacity());
             //任务数包括队列和正在执行的任务
             props.put("taskCount",executor.getThreadPoolExecutor().getTaskCount()-executor.getThreadPoolExecutor().getCompletedTaskCount());
             //发送监控数据
-            handler.handle(MetricsQuota.THREAD,tags,props);
+            handler.handle(MetricQuota.THREAD,tags,props);
 
             //当线程池被占满需要打印堆栈
             if(executor.getMaxPoolSize()== executor.getActiveCount()){
@@ -110,7 +106,7 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
                         stackTraces.add(thread.getStackTrace());
                     }
                 }
-                blockingStackTraceCollector.collect(MetricsQuota.THREAD,each.getKey(),stackTraces);
+                blockingStackTraceCollector.collect(MetricQuota.THREAD,each.getKey(),stackTraces);
             }
         }
 

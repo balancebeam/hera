@@ -1,8 +1,8 @@
 package io.anyway.hera.mybatis;
 
-import io.anyway.hera.collector.MetricsHandler;
-import io.anyway.hera.common.MetricsQuota;
-import io.anyway.hera.jdbc.JdbcWrapperHelper;
+import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
@@ -41,20 +41,20 @@ import java.util.regex.Pattern;
                         CacheKey.class,
                         BoundSql.class})
 })
-public class MybatisMetricsInterceptor implements Interceptor {
+@NonMetricService
+public class MetricMybatisInterceptor implements Interceptor {
 
-    private MetricsHandler handler;
+    private MetricHandler handler;
 
     private final Pattern pattern= Pattern.compile("[^\\.]+\\.[^\\.]+$");
 
-    public void setHandler(MetricsHandler handler){
+    public void setHandler(MetricHandler handler){
         this.handler= handler;
     }
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         Map<String,Object> props= new LinkedHashMap<String,Object>();
-        JdbcWrapperHelper.setMetricsProps(props);
         Map<String,String> tags= new LinkedHashMap<String,String>();
         String mapper= ((MappedStatement)invocation.getArgs()[0]).getId();
         Matcher matcher= pattern.matcher(mapper);
@@ -64,15 +64,15 @@ public class MybatisMetricsInterceptor implements Interceptor {
         tags.put("mapper",mapper);
         try{
             long beginTime= System.currentTimeMillis();
+            props.put("beginTime",beginTime);
             Object result= invocation.proceed();
             int size= result instanceof Collection? ((Collection<?>)result).size(): 1;
-            props.put("result-size",size);
+            props.put("size",size);
             long duration= System.currentTimeMillis()- beginTime;
-            props.put("mapper-duration", duration);
+            props.put("duration", duration);
             return result;
         }finally{
-            JdbcWrapperHelper.setMetricsProps(null);
-            handler.handle(MetricsQuota.SQL,tags,props);
+            handler.handle(MetricQuota.MAPPER,tags,props);
         }
     }
 
