@@ -51,7 +51,6 @@ public class MetricHttpInterceptor implements HandlerInterceptor,Ordered {
             HttpServletRequest request,
             HttpServletResponse response,
             Object handler) throws Exception {
-        holder.remove();
 
         //如果在Filter处理过,或者嵌套拦截器处理过就不处理
         if(MetricTraceContextHolder.getMetricTraceContext()!= null){
@@ -125,18 +124,22 @@ public class MetricHttpInterceptor implements HandlerInterceptor,Ordered {
         if(props== null){
             return;
         }
+        MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
         //处理异常
-        if(ex!= null){
-            Map<String,String> xtags= new LinkedHashMap<String,String>();
-            xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricQuota.HTTP.toString());
-            Map<String,Object> xprops= new LinkedHashMap<String,Object>();
-            xprops.put("message",ex.getMessage());
-            xprops.put("beginTime",System.currentTimeMillis());
-            this.handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
+        if(ex!= null) {
+            if (!ctx.containException(ex)){
+                ctx.addException(ex);
+                Map<String, String> xtags = new LinkedHashMap<String, String>();
+                xtags.put("class", ex.getClass().getSimpleName());
+                xtags.put("quota", MetricQuota.HTTP.toString());
+                Map<String, Object> xprops = new LinkedHashMap<String, Object>();
+                xprops.put("message", ex.getMessage());
+                xprops.put("beginTime", System.currentTimeMillis());
+                this.handler.handle(MetricQuota.EXCEPTION, xtags, xprops);
+            }
         }
 
-        MetricTraceContextHolder.getMetricTraceContext().getTraceStack().pop();
+        ctx.getTraceStack().pop();
         //记录结束时间
         long endTime= System.currentTimeMillis();
         Map<String,String> tags= null;
@@ -159,7 +162,6 @@ public class MetricHttpInterceptor implements HandlerInterceptor,Ordered {
         //清空上下文变量
         MetricTraceContextHolder.clear();
         holder.remove();
-        MDC.remove("traceId");
     }
 
     @Override

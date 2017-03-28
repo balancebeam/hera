@@ -2,6 +2,7 @@ package io.anyway.hera.jdbc;
 
 import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.context.MetricTraceContextHolder;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -248,6 +249,9 @@ class JdbcWrapper {
                     xprops.put("message",ex.getMessage());
                     xprops.put("beginTime",System.currentTimeMillis());
                     handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
+                    if(MetricTraceContextHolder.getMetricTraceContext()!= null){
+                        MetricTraceContextHolder.getMetricTraceContext().addException(ex);
+                    }
                 }
             }
             throw e;

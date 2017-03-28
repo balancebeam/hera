@@ -1,5 +1,7 @@
 package io.anyway.hera.context;
 
+import org.slf4j.MDC;
+
 /**
  * Created by yangzz on 16/8/16.
  */
@@ -26,5 +28,6 @@ final public class MetricTraceContextHolder {
      */
     public static void clear(){
         holder.remove();
+        MDC.remove("traceId");
     }
 }

@@ -75,12 +75,13 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricCollector,O
         String spanId= IdGenerator.next();
         //设置该请求的唯一ID
         props.put("spanId",spanId);
+        boolean traceable= true;
         //获取监控上下文
         MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
         //如果是本地调用
         if (ctx== null) {
+            traceable= false;
             String traceId= IdGenerator.next();
-            MDC.put("traceId",traceId);
             //构造监控上下文
             ctx= new MetricTraceContext();
             ctx.setTraceId(traceId);
@@ -101,13 +102,16 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricCollector,O
             return invocation.proceed();
         }catch (Throwable ex){
             //如果存在异常记录异常信息
-            Map<String,String> xtags= new LinkedHashMap<String,String>();
-            xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricQuota.SERVICE.toString());
-            Map<String,Object> xprops= new LinkedHashMap<String,Object>();
-            xprops.put("message",ex.getMessage());
-            xprops.put("beginTime",System.currentTimeMillis());
-            handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
+            if(!ctx.containException(ex)) {
+                ctx.addException(ex);
+                Map<String, String> xtags = new LinkedHashMap<String, String>();
+                xtags.put("class", ex.getClass().getSimpleName());
+                xtags.put("quota", MetricQuota.SERVICE.toString());
+                Map<String, Object> xprops = new LinkedHashMap<String, Object>();
+                xprops.put("message", ex.getMessage());
+                xprops.put("beginTime", System.currentTimeMillis());
+                handler.handle(MetricQuota.EXCEPTION, xtags, xprops);
+            }
             throw ex;
         }
         finally {
@@ -121,6 +125,9 @@ public class ServiceMethodAdvisor implements MethodInterceptor,MetricCollector,O
             props.put("duration",endTime - beginTime);
             //发送监控记录
             handler.handle(MetricQuota.SERVICE,tags,props);
+            if(!traceable){
+                MetricTraceContextHolder.clear();
+            }
         }
     }
 

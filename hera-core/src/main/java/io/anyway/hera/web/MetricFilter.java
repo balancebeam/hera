@@ -70,8 +70,6 @@ public class MetricFilter implements Filter {
         if(!StringUtils.isEmpty(parentId)) {
             traceStack.push(parentId);
         }
-        //把跟踪链的信息绑定到日志里,方便做日志跟踪
-        MDC.put("traceId",traceId);
         //构造监控上下文
         MetricTraceContext ctx= new MetricTraceContext();
         ctx.setTraceId(traceId);
@@ -111,13 +109,16 @@ public class MetricFilter implements Filter {
             chain.doFilter(req,res);
         }catch (Throwable ex){
             //如果存在异常记录异常信息
-            Map<String,String> xtags= new LinkedHashMap<String,String>();
-            xtags.put("class",ex.getClass().getSimpleName());
-            xtags.put("quota", MetricQuota.HTTP.toString());
-            Map<String,Object> xprops= new LinkedHashMap<String,Object>();
-            xprops.put("message",ex.getMessage());
-            xprops.put("beginTime",System.currentTimeMillis());
-            handler.handle(MetricQuota.EXCEPTION,xtags,xprops);
+            if(!ctx.containException(ex)) {
+                ctx.addException(ex);
+                Map<String, String> xtags = new LinkedHashMap<String, String>();
+                xtags.put("class", ex.getClass().getSimpleName());
+                xtags.put("quota", MetricQuota.HTTP.toString());
+                Map<String, Object> xprops = new LinkedHashMap<String, Object>();
+                xprops.put("message", ex.getMessage());
+                xprops.put("beginTime", System.currentTimeMillis());
+                handler.handle(MetricQuota.EXCEPTION, xtags, xprops);
+            }
 
             if(ex instanceof IOException){
                 throw (IOException)ex;
@@ -139,8 +140,6 @@ public class MetricFilter implements Filter {
             handler.handle(MetricQuota.HTTP,tags,props);
             //清空上下文
             MetricTraceContextHolder.clear();
-            //清除日志
-            MDC.remove("traceId");
         }
     }
 

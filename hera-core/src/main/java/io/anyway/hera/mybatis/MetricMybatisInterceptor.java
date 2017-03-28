@@ -1,7 +1,10 @@
 package io.anyway.hera.mybatis;
 
 import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.common.IdGenerator;
 import io.anyway.hera.common.MetricQuota;
+import io.anyway.hera.context.MetricTraceContext;
+import io.anyway.hera.context.MetricTraceContextHolder;
 import io.anyway.hera.service.NonMetricService;
 import org.apache.ibatis.cache.CacheKey;
 import org.apache.ibatis.executor.Executor;
@@ -62,6 +65,12 @@ public class MetricMybatisInterceptor implements Interceptor {
             mapper= matcher.group();
         }
         tags.put("mapper",mapper);
+        MetricTraceContext ctx= MetricTraceContextHolder.getMetricTraceContext();
+        if(ctx!= null){
+            String spanId= IdGenerator.next();
+            props.put("spanId",spanId);
+            ctx.getTraceStack().add(spanId);
+        }
         try{
             long beginTime= System.currentTimeMillis();
             props.put("beginTime",beginTime);
@@ -72,6 +81,9 @@ public class MetricMybatisInterceptor implements Interceptor {
             props.put("duration", duration);
             return result;
         }finally{
+            if(ctx!= null){
+                ctx.getTraceStack().pop();
+            }
             handler.handle(MetricQuota.MAPPER,tags,props);
         }
     }
