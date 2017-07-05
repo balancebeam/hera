@@ -13,6 +13,8 @@ import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -45,15 +47,13 @@ import java.util.regex.Pattern;
                         BoundSql.class})
 })
 @NonMetricService
+@Component("metricMybatisInterceptor")
 public class MetricMybatisInterceptor implements Interceptor {
 
+    @Autowired
     private MetricHandler handler;
 
     private final Pattern pattern= Pattern.compile("[^\\.]+\\.[^\\.]+$");
-
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {

@@ -10,7 +10,10 @@ import io.anyway.hera.context.MetricTraceContextHolder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.ServletException;
@@ -25,25 +28,25 @@ import java.util.regex.Pattern;
  * Created by yangzz on 16/8/13.
  */
 @NonMetricService
+@Component("metricServiceMethodAdvisor")
 public class ServiceMethodAdvisor implements MethodInterceptor,MetricCollector,Ordered {
 
     private long pendingTime= 2*60*1000; //默认2分钟
 
-    final private ConcurrentMap<String,LongService> longServices = new ConcurrentHashMap<String,LongService>(2048);
-
-    private MetricHandler handler;
-
     private List<Pattern> regExes= Collections.emptyList();
 
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
+    final private ConcurrentMap<String,LongService> longServices = new ConcurrentHashMap<String,LongService>(2048);
 
-    public void setPendingTime(long pendingTime){
+    @Autowired
+    private MetricHandler handler;
+
+    @Autowired
+    public void setPendingTime(@Value("${hera.service.pendingTime:120000}") long pendingTime){
         this.pendingTime= pendingTime;
     }
 
-    public void setPatterns(String patterns) throws ServletException {
+    @Autowired
+    public void setPatterns(@Value("${hera.service.pattern:}") String patterns) throws ServletException {
         if(!StringUtils.isEmpty(patterns)){
             regExes= new LinkedList<Pattern>();
             for(String each: patterns.split(",")){

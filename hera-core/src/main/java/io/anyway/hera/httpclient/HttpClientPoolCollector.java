@@ -15,8 +15,10 @@ import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.pool.ConnPoolControl;
 import org.apache.http.pool.PoolStats;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cglib.proxy.InvocationHandler;
 import org.springframework.cglib.proxy.Proxy;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
@@ -31,23 +33,18 @@ import java.util.concurrent.TimeUnit;
  * Created by yangzz on 17/1/4.
  */
 @NonMetricService
+@Component
 public class HttpClientPoolCollector implements BeanPostProcessorWrapper,MetricCollector {
 
     private Log logger= LogFactory.getLog(HttpClientPoolCollector.class);
 
-    private MetricHandler handler;
-
-    private BlockingStackTraceCollector blockingStackTraceCollector;
-
     private final Map<String,ConnPoolControl<HttpRoute>> pool= new LinkedHashMap<String,ConnPoolControl<HttpRoute>>();
 
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
+    @Autowired
+    private MetricHandler handler;
 
-    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
-        this.blockingStackTraceCollector = blockingStackTraceCollector;
-    }
+    @Autowired
+    private BlockingStackTraceCollector blockingStackTraceCollector;
 
     @Override
     public boolean interest(Object bean) {

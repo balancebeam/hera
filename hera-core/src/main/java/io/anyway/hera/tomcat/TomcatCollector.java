@@ -4,8 +4,11 @@ import io.anyway.hera.collector.MetricCollector;
 import io.anyway.hera.collector.MetricHandler;
 import io.anyway.hera.common.MetricQuota;
 import io.anyway.hera.jvm.MBeans;
+import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import javax.management.JMException;
 import javax.management.MalformedObjectNameException;
@@ -15,6 +18,8 @@ import java.util.*;
 /**
  * Created by yangzz on 16/12/20.
  */
+@NonMetricService
+@Component
 public class TomcatCollector implements MetricCollector {
 
     private final Log logger= LogFactory.getLog(TomcatCollector.class);
@@ -27,6 +32,7 @@ public class TomcatCollector implements MetricCollector {
 
     private Map<String,ObjectName> GLOBAL_REQUEST_PROCESSORS;
 
+    @Autowired
     private MetricHandler handler;
 
     public TomcatCollector(){
@@ -55,10 +61,6 @@ public class TomcatCollector implements MetricCollector {
         } catch (MalformedObjectNameException e) {
             logger.error(e);
         }
-    }
-
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
     }
 
     @Override

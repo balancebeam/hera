@@ -8,7 +8,10 @@ import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jndi.JndiObjectFactoryBean;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
@@ -20,31 +23,27 @@ import java.util.*;
  * Created by yangzz on 16/8/17.
  */
 @NonMetricService
+@Component
 public class DataSourceCollector implements BeanPostProcessorWrapper,MetricCollector {
 
     private Log logger= LogFactory.getLog(DataSourceCollector.class);
 
     private Map<String,JdbcWrapper> jdbcWrappers= new HashMap<String, JdbcWrapper>();
 
-    private List<String> excludedDatasources;
+    private List<String> excludedDatasources= Collections.emptyList();
 
+    @Autowired
     private MetricHandler handler;
 
+    @Autowired
     private BlockingStackTraceCollector blockingStackTraceCollector;
-
-    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
-        this.blockingStackTraceCollector = blockingStackTraceCollector;
-    }
-
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
 
     /**
      * 设置监控数据源的属性内容,默认 dbcp | druid 不用配置,c3p0 | jndi数据源需要配置
      * @param configMetadata
      */
-    public void setConfigMetadata(String configMetadata){
+    @Autowired
+    public void setConfigMetadata(@Value("${hera.jdbc.configMetadata:}") String configMetadata){
         if(!StringUtils.isEmpty(configMetadata)){
             Map<String,String> hash= new LinkedHashMap<String, String>();
             for(String each: configMetadata.split(",")){
@@ -60,7 +59,8 @@ public class DataSourceCollector implements BeanPostProcessorWrapper,MetricColle
      * 不需要监控的数据源
      * @param excludedDatasources
      */
-    public void setExcludedDatasources(String excludedDatasources) {
+    @Autowired
+    public void setExcludedDatasources(@Value("${hera.jdbc.excludedDatasources:}") String excludedDatasources) {
         if(!StringUtils.isEmpty(excludedDatasources)) {
             this.excludedDatasources = Arrays.asList(excludedDatasources.split(","));
         }

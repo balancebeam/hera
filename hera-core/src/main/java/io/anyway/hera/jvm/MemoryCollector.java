@@ -8,6 +8,8 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.lang.management.*;
@@ -20,19 +22,17 @@ import java.util.Map;
  * Created by yangzz on 16/8/24.
  */
 @NonMetricService
+@Component
 public class MemoryCollector implements MetricCollector,InitializingBean {
 
     private long m_unit= 1024*1024;
 
     private Log logger= LogFactory.getLog(MemoryCollector.class);
 
-    private MetricHandler handler;
-
     private Map<String,Map<String,Long>> lastGCVals= new LinkedHashMap<String, Map<String, Long>>(2);
 
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
+    @Autowired
+    private MetricHandler handler;
 
     @Override
     public void doCollect() {

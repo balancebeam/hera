@@ -20,6 +20,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by yangzz on 16/8/17.
@@ -29,6 +31,8 @@ class JdbcWrapper {
     private final static Log logger= LogFactory.getLog(JdbcWrapper.class);
 
     private MetricHandler handler;
+
+    final static Pattern pattern= Pattern.compile("(?i)[a-z]+");
 
     static Map<String,String> DATASOURCE_CONFIG_METADATA= new LinkedHashMap<String, String>();
 
@@ -257,15 +261,24 @@ class JdbcWrapper {
             throw e;
         } finally {
             ACTIVE_CONNECTION_COUNT.decrementAndGet();
-            long endTime= System.currentTimeMillis();
-            //设置调用方法名称
-            props.put("sql",requestName);
-            //记录sql语句的长度大小
-            props.put("length",requestName.length());
-            //记录执行的时间
-            props.put("duration",endTime-beginTime);
-            //发送监控记录
-            handler.handle(MetricQuota.SQL, null, props);
+            if(!"".equals(requestName)) {
+                Matcher m= pattern.matcher(requestName);
+                if(m.find()){
+                    String type= m.group().toString();
+                    type= "with".equals(type)? "select": type;
+                    props.put("type",type);
+                }
+                long endTime = System.currentTimeMillis();
+                int length = requestName.length();
+                //设置调用方法名称
+                props.put("sql", length > 2000 ? requestName.substring(0, 2000) + "..." : requestName);
+                //记录sql语句的长度大小
+                props.put("length", length);
+                //记录执行的时间
+                props.put("duration", endTime - beginTime);
+                //发送监控记录
+                handler.handle(MetricQuota.SQL, null, props);
+            }
         }
     }
 

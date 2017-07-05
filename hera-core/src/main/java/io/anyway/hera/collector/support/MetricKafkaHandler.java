@@ -17,6 +17,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.net.InetAddress;
@@ -31,46 +33,29 @@ import java.util.concurrent.TimeUnit;
  * Created by yangzz on 16/9/13.
  */
 @NonMetricService
+@Component
 public class MetricKafkaHandler implements MetricHandler,InitializingBean,DisposableBean{
 
     private Log logger= LogFactory.getLog(MetricKafkaHandler.class);
-
-    private String servers;
-
-    private int timeout= 30;
-
-    private String clientId;
-
-    private String appId;
-
-    private String database;
 
     private Map<String,String> tags = new LinkedHashMap<String, String>();
 
     private Producer<String, String> producer;
 
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
+    @Value("${hera.kafka.servers}")
+    private String servers;
 
-    public void setTimeout(int timeout) {
-        this.timeout = timeout;
-    }
+    @Value("${hera.kafka.producer.timeout:30}")
+    private int timeout= 30;
 
-    public void setDatabase(String database) {
-        if(database== null || "".equals(database.trim())){
-            throw new IllegalArgumentException("database must be not empty.");
-        }
-        this.database = database;
-    }
+    @Value("${hera.kafka.client.id:default}")
+    private String clientId;
 
-    public void setServers(String servers) {
-        this.servers = servers;
-    }
+    @Value("${hera.appId}")
+    private String appId;
 
-    public void setAppId(String appId) {
-        this.appId= appId;
-    }
+    @Value("${hera.influxdb.database}")
+    private String database;
 
     private ValueFilter filter = new ValueFilter() {
         @Override
@@ -85,7 +70,9 @@ public class MetricKafkaHandler implements MetricHandler,InitializingBean,Dispos
     private SerializerFeature[] features=new SerializerFeature[0];
 
     @Override
-    public void handle(final MetricQuota type, final Map<String, String> tags, final Map<String, Object> props) {
+    public void handle(final MetricQuota type,
+                       final Map<String, String> tags,
+                       final Map<String, Object> props) {
 
         Map<String,Object> xprops= new LinkedHashMap<String, Object>(props);
         //获取跟踪链上下文
@@ -116,11 +103,7 @@ public class MetricKafkaHandler implements MetricHandler,InitializingBean,Dispos
         jsonObject.put("tags",xtags);
         jsonObject.put("props",xprops);
         try {
-            Future<RecordMetadata> future=  producer.send(new ProducerRecord<String, String>("hera-metrics", JSON.toJSONString(jsonObject, filter, features)));
-            RecordMetadata metadata= future.get(timeout, TimeUnit.SECONDS);
-            if(logger.isDebugEnabled()){
-                logger.debug("Send message: {topic:"+metadata.topic()+",partition:"+metadata.partition()+",offset:"+metadata.offset()+"}");
-            }
+            producer.send(new ProducerRecord<String, String>("hera-metrics", JSON.toJSONString(jsonObject, filter, features)));
         } catch (Exception e) {
             logger.error(e.getMessage());
         }

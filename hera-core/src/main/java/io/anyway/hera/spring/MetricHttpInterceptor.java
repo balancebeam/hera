@@ -8,7 +8,10 @@ import io.anyway.hera.context.MetricTraceContext;
 import io.anyway.hera.context.MetricTraceContextHolder;
 import io.anyway.hera.service.NonMetricService;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
@@ -25,19 +28,18 @@ import java.util.regex.Pattern;
  * Created by yangzz on 16/11/20.
  */
 @NonMetricService
+@Component("metricHttpInterceptor")
 public class MetricHttpInterceptor implements HandlerInterceptor,Ordered {
 
     private ThreadLocal<Map<String,Object>> holder= new ThreadLocal<Map<String,Object>>();
 
+    @Autowired
     private MetricHandler handler;
 
     private List<Pattern> regExes= Collections.emptyList();
 
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
-
-    public void setPatterns(String patterns) throws ServletException {
+    @Autowired
+    public void setPatterns(@Value("") String patterns) throws ServletException {
         if(!StringUtils.isEmpty(patterns)){
             regExes= new LinkedList<Pattern>();
             for(String each: patterns.split(",")){

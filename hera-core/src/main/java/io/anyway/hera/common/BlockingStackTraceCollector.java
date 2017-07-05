@@ -1,6 +1,10 @@
 package io.anyway.hera.common;
 
 import io.anyway.hera.collector.MetricHandler;
+import io.anyway.hera.service.NonMetricService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -9,17 +13,17 @@ import java.util.regex.Pattern;
 /**
  * Created by yangzz on 17/2/21.
  */
+@NonMetricService
+@Component
 public class BlockingStackTraceCollector {
 
     private List<Pattern> regExps= Collections.emptyList();
 
+    @Autowired
     private MetricHandler handler;
 
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
-
-    public void setTracePackages(String tracePackages){
+    @Autowired
+    public void setTracePackages(@Value("${hera.tracePackages}") String tracePackages){
         if(StringUtils.isEmpty(tracePackages)){
             throw new IllegalArgumentException("TracePackage not empty.");
         }

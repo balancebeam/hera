@@ -6,6 +6,7 @@ import org.springframework.aop.ClassFilter;
 import org.springframework.aop.MethodMatcher;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.framework.Advised;
+import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -17,6 +18,8 @@ import java.util.List;
 /**
  * Created by yangzz on 16/8/13.
  */
+@NonMetricService
+@Component("metricServicePointcut")
 public class ServiceTypePointcut implements Pointcut {
 
     private Log logger= LogFactory.getLog(ServiceTypePointcut.class);

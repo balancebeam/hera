@@ -7,11 +7,10 @@ import io.anyway.hera.common.MetricUtils;
 import io.anyway.hera.common.IdGenerator;
 import io.anyway.hera.context.MetricTraceContext;
 import io.anyway.hera.context.MetricTraceContextHolder;
-import org.slf4j.MDC;
-import org.springframework.context.ApplicationContext;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.*;
+import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
@@ -22,15 +21,13 @@ import java.util.regex.Pattern;
 /**
  * Created by yangzz on 16/8/16.
  */
+@WebFilter(urlPatterns = "/*",asyncSupported = true)
 public class MetricFilter implements Filter {
-
-    private ServletContext servletContext;
 
     private List<Pattern> regExes= Collections.emptyList();
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        servletContext= filterConfig.getServletContext();
         String patterns= filterConfig.getInitParameter("patterns");
         if(!StringUtils.isEmpty(patterns)){
             regExes= new LinkedList<Pattern>();
@@ -43,12 +40,11 @@ public class MetricFilter implements Filter {
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 
-        ApplicationContext applicationContext= MetricUtils.getWebApplicationContext(servletContext);
-        MetricHandler handler= applicationContext.getBean(MetricHandler.class);
-        if(handler== null){
+        if(!MetricUtils.isEnabled()){
             chain.doFilter(req,res);
             return;
         }
+
 
         HttpServletRequest request= (HttpServletRequest)req;
         //获取传入跟踪链的信息
@@ -103,6 +99,8 @@ public class MetricFilter implements Filter {
         props.put("beginTime", beginTime);
         //把当前的路径入栈
         traceStack.add(spanId);
+
+        MetricHandler handler= MetricUtils.getApplicationContext().getBean(MetricHandler.class);
 
         try{
             //调用过滤链

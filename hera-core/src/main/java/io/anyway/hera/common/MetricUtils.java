@@ -12,6 +12,8 @@ import java.util.*;
  */
 final public class MetricUtils {
 
+    static ApplicationContext applicationContext;
+
     private static ThreadLocal<SimpleDateFormat> holder= new ThreadLocal<SimpleDateFormat>();
 
     public static String formatDate(long time){
@@ -20,20 +22,6 @@ final public class MetricUtils {
             holder.set(sdf= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.ms"));
         }
         return sdf.format(new Date(time));
-    }
-
-    public static ApplicationContext getWebApplicationContext(ServletContext ctx){
-        ApplicationContext applicationContext= WebApplicationContextUtils.getWebApplicationContext(ctx);
-        if(applicationContext==null) {
-            for (Enumeration each = ctx.getAttributeNames(); each.hasMoreElements(); ) {
-                String name = (String) each.nextElement();
-                if (ctx.getAttribute(name) instanceof ApplicationContext) {
-                    applicationContext= (ApplicationContext) ctx.getAttribute(name);
-                    break;
-                }
-            }
-        }
-        return applicationContext;
     }
 
     public static Class<?>[] getInterfaces(Class<?> clazz){
@@ -52,5 +40,13 @@ final public class MetricUtils {
             idx.addAll(Arrays.asList(interfaces));
         }
         return idx.toArray(new Class<?>[idx.size()]);
+    }
+
+    public static boolean isEnabled(){
+        return applicationContext!= null;
+    }
+
+    public static ApplicationContext getApplicationContext(){
+        return applicationContext;
     }
 }

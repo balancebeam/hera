@@ -9,7 +9,9 @@ import io.anyway.hera.spring.BeanPostProcessorWrapper;
 import io.anyway.hera.spring.BeanPreProcessorWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -18,25 +20,18 @@ import java.util.*;
  * Created by yangzz on 16/8/19.
  */
 @NonMetricService
+@Component
 public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProcessorWrapper,MetricCollector {
-
-    private MetricHandler handler;
 
     private Log logger= LogFactory.getLog(ThreadPoolCollector.class);
 
     private Map<String,ThreadPoolWrapper> threadPools= new LinkedHashMap<String,ThreadPoolWrapper>();
 
-    private Set<String> excludedThreadPools= Collections.emptySet();
+    @Autowired
+    private MetricHandler handler;
 
+    @Autowired
     private BlockingStackTraceCollector blockingStackTraceCollector;
-
-    public void setBlockingStackTraceCollector(BlockingStackTraceCollector blockingStackTraceCollector) {
-        this.blockingStackTraceCollector = blockingStackTraceCollector;
-    }
-
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
-    }
 
     @Override
     public boolean interest(Object bean) {
@@ -51,23 +46,15 @@ public class ThreadPoolCollector implements BeanPostProcessorWrapper,BeanPreProc
 
     @Override
     public synchronized Object wrapBean(Object bean,String appId, String beanName) {
-        if(!excludedThreadPools.contains(beanName)){
-            ThreadPoolWrapper threadPoolWrapper= new ThreadPoolWrapper((ThreadPoolTaskExecutor)bean);
-            threadPools.put((StringUtils.isEmpty(appId)?"":appId+":")+beanName,threadPoolWrapper);
-            logger.info("Monitor thread pool: "+beanName);
-            return threadPoolWrapper;
-        }
-        return bean;
+        ThreadPoolWrapper threadPoolWrapper= new ThreadPoolWrapper((ThreadPoolTaskExecutor)bean);
+        threadPools.put((StringUtils.isEmpty(appId)?"":appId+":")+beanName,threadPoolWrapper);
+        logger.info("Monitor thread pool: "+beanName);
+        return threadPoolWrapper;
     }
 
     @Override
     public synchronized void destroyWrapper(String appId, String beanName) {
         threadPools.remove((StringUtils.isEmpty(appId)?"":appId+":")+beanName);
-    }
-
-    public void setExcludedThreadPools(Set<String> excludedThreadPools) {
-        this.excludedThreadPools = excludedThreadPools;
-        logger.info("ExcludedThreadPools: "+excludedThreadPools);
     }
 
     @Override

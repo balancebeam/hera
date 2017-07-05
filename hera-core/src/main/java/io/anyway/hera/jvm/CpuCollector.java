@@ -6,6 +6,8 @@ import io.anyway.hera.collector.MetricCollector;
 import io.anyway.hera.service.NonMetricService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.management.ManagementFactory;
@@ -18,13 +20,15 @@ import java.util.Map;
  * Created by yangzz on 16/8/24.
  */
 @NonMetricService
+@Component
 public class CpuCollector implements MetricCollector {
 
-    private MetricHandler handler;
+    private Log logger= LogFactory.getLog(CpuCollector.class);
 
     private Method method;
 
-    private Log logger= LogFactory.getLog(CpuCollector.class);
+    @Autowired
+    private MetricHandler handler;
 
     public CpuCollector(){
         OperatingSystemMXBean operatingSystem = ManagementFactory.getOperatingSystemMXBean();
@@ -36,10 +40,6 @@ public class CpuCollector implements MetricCollector {
         else{
             logger.info(operatingSystem.getClass()+".getSystemLoadAverage() collect cpuLoad");
         }
-    }
-
-    public void setHandler(MetricHandler handler){
-        this.handler= handler;
     }
 
     @Override

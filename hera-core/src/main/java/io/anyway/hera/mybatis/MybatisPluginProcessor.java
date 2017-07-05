@@ -4,6 +4,8 @@ import io.anyway.hera.service.NonMetricService;
 import io.anyway.hera.spring.BeanPreProcessorWrapper;
 import org.apache.ibatis.plugin.Interceptor;
 import org.mybatis.spring.SqlSessionFactoryBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
@@ -14,11 +16,9 @@ import java.lang.reflect.Field;
 @NonMetricService
 public class MybatisPluginProcessor implements BeanPreProcessorWrapper{
 
+    @Autowired
+    @Qualifier("metricMybatisInterceptor")
     private Interceptor interceptor;
-
-    public void setInterceptor(Interceptor interceptor){
-        this.interceptor= interceptor;
-    }
 
     @Override
     public boolean interest(Object bean) {

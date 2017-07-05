@@ -62,7 +62,7 @@ public class KafkaMetricsConsumer implements InitializingBean,DisposableBean {
         props.put("bootstrap.servers", servers);
         props.put("group.id", group);
         props.put("client.id",clientId);
-        props.put("enable.auto.commit", "false");
+        props.put("enable.auto.commit", "true");
         props.put("auto.commit.interval.ms", "1000");
         props.put("session.timeout.ms", "30000");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
@@ -93,13 +93,6 @@ public class KafkaMetricsConsumer implements InitializingBean,DisposableBean {
                                     logger.debug(jsonObject.toString());
                                 }
                                 influxdbRepository.send(jsonObject);
-                            }
-                            //同步设置offset
-                            long lastOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
-                            Map<TopicPartition, OffsetAndMetadata> offsets = Collections.singletonMap(partition, new OffsetAndMetadata(lastOffset + 1));
-                            consumer.commitSync(offsets);
-                            if (logger.isDebugEnabled()) {
-                                logger.debug("application group: " + group + " has committed offset: " + offsets);
                             }
                         }
                     } catch (Throwable e) {

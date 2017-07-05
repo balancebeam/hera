@@ -99,7 +99,7 @@ public class MetricListener implements HttpSessionListener, HttpSessionActivatio
     private void doMonitor(){
         Map<String,Object> props= new LinkedHashMap<String, Object>();
         props.put("count",SESSION_COUNT.get());
-        ApplicationContext ctx= MetricUtils.getWebApplicationContext(servletContext);
+        ApplicationContext ctx= MetricUtils.getApplicationContext();
         if(ctx!= null) {
             MetricHandler handler = ctx.getBean(MetricHandler.class);
             handler.handle(MetricQuota.SESSION, null, props);
